@@ -1,0 +1,8 @@
+cs_env/
+.env
+.idea
+vvenv
+test.py
+.sqlite3
+.handler-saves/
+__pycache__/
