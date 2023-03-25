@@ -68,7 +68,7 @@ class operations():
             cursor.execute (f"""UPDATE users SET selection = {selection} WHERE user_id = {message.chat.id}""")
             conn.commit()
         
-        def add_user_action(action, user_id):
+        def action(action, user_id):
             cursor.execute(f"""UPDATE users SET action = '{action}' WHERE user_id = {user_id}""")
             conn.commit()
 
@@ -89,17 +89,15 @@ class operations():
 '''CURRENCIES'''
 class currencies():
     class get():
-        # Получает как аргумент словарь. Ключем этого словаря является какого типа был передан аргумент
-        def id(cur):
-            values = [item for item in cur.items()][0]
-            key, value = values[0], values[1]
-
-            if key == 'currency_name':
-                cursor.execute(f"SELECT currency_id FROM currencies WHERE name = '{value}'")
+        # Получает 2 аргумента. input_data - информация по которой происходит поиск айди валюты
+        #                       data_type - тип данных по котором происходит поиск
+        def id(input_data, data_type):
+            if data_type == 'currency_name':
+                cursor.execute(f"SELECT currency_id FROM currencies WHERE name = '{input_data}'")
             else:
-                cursor.execute(f"SELECT currency_id FROM users WHERE user_id = {value}")
-            currencies_id = cursor.fetchone()[0]
-            return currencies_id
+                cursor.execute(f"SELECT currency_id FROM users WHERE user_id = {input_data}")
+            currencies_id = cursor.fetchone()
+            return None if currencies_id == None else currencies_id[0]
 
         # Принимает аргумент айдишника валюты и возварщает название этой валюты
         def name(cur_id):

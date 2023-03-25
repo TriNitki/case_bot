@@ -26,10 +26,10 @@ class operation():
             
             try:
                 self.currency_name = args[3]
-                data = db.currencies.get.id({'currency_name': self.currency_name})
+                data = db.currencies.get.id(self.currency_name, 'currency_name')
                 self.currency_id = int(data)
             except:
-                data = db.currencies.get.id({'user_id': self.user_id})
+                data = db.currencies.get.id(self.user_id, 'user_id')
                 
                 if data == None:
                     self.currency_id = 1

@@ -41,7 +41,7 @@ def history_operation_edit_handler(message):
 
 def history_operation_edit(message):
     bot.send_message(message.chat.id, 'Изменить на какое значение?')
-    db.operations.get.action(message.text, message.chat.id)
+    db.operations.add.action(message.text, message.chat.id)
 
 
 def history_operation_delete(message):
@@ -59,5 +59,63 @@ def history_operation_delete(message):
         print('no del')
 
 def edit_operation_handler(oper_id, to_edit, value):
-    if to_edit == 'price':
+    if to_edit == 'price': #['item_name']
         db.operations.edit(oper_id, 'price', value)
+        result = 'success'
+    
+    elif to_edit == 'currency':
+        cur_id = db.currencies.get.id(value, 'currency_name')
+        if cur_id != None:
+            db.operations.edit(oper_id, 'currency_id', cur_id)
+            result = 'success'
+        else:
+            result = 'failure'
+    
+    elif to_edit == 'operation':
+        operation = db.operations.get.operation(operation_id=oper_id)
+        a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
+        if value not in ['buy', 'sell']:
+            result = 'failure'
+            return result
+        print(a_quantiry, value)
+
+        if value != operation[2]:
+            print(a_quantiry, value, int(operation[3])*2)
+            if value == 'sell' and a_quantiry <= int(operation[3])*2:
+                result = 'failure'
+                return result
+            db.inventories.edit(user_id=operation[1], operation_name=value, quantity=operation[3]*2, item_id=operation[4])
+            db.operations.edit(oper_id, 'name', value)
+            result = 'success'
+        else:
+            result = 'failure'
+
+    elif to_edit == 'quantity':
+        operation = db.operations.get.operation(operation_id=oper_id)
+        a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
+        
+        if (operation[2] == 'buy' and operation[3] < int(value)) or (operation[2] == 'sell' and operation[3] > int(value)):
+            if operation[2] == 'buy':
+                dif = int(value) - operation[3]
+            else:
+                dif = operation[3] - int(value)
+            
+            db.inventories.edit(user_id=operation[1], operation_name='buy', quantity=dif, item_id=operation[4])
+            db.operations.edit(oper_id, 'quantity', value)
+            result = 'success'
+        elif (operation[2] == 'buy' and operation[3] > int(value)) or (operation[2] == 'sell' and operation[3] < int(value)):
+            if operation[2] == 'buy':
+                dif = operation[3] - int(value)
+            else:
+                dif = int(value) - operation[3]
+            
+            if dif > a_quantiry:
+                result = 'failure'
+            else:
+                db.inventories.edit(user_id=operation[1], operation_name='sell', quantity=dif, item_id=operation[4])
+                db.operations.edit(oper_id, 'quantity', value)
+                result = 'success'
+        else:
+            result = 'failure'
+    return result
+    

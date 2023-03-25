@@ -99,11 +99,15 @@ def hist_handler(message):
     else:
         action = db.operations.get.action(message.chat.id)
         selection = db.operations.get.selection(message.chat.id)
+        print(action, selection)
         if action != None:
-            f.edit_operation_handler(selection, action, message.text)
-            db.operations.delete.action(message.chat.id)
-            db.operations.delete.selection(message.chat.id)
-            bot.send_message(message.chat.id, 'Готово!')
+            result = f.edit_operation_handler(selection, action, message.text)
+            if result == 'success':
+                db.operations.delete.action(message.chat.id)
+                db.operations.delete.selection(message.chat.id)
+                bot.send_message(message.chat.id, 'Готово!')
+            else:
+                bot.send_message(message.chat.id, 'Произошла ошибка')
     
 
 
