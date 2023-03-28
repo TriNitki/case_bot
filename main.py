@@ -76,7 +76,12 @@ def history(message):
 
     operations = db.operations.get.list(message)
     msg = 'История всех действий:\n\n'
-    for idx, operation in enumerate(operations):
+    try:
+        enum_oper = enumerate(operations)
+    except:
+        bot.send_message(message.chat.id, 'Произошло ошибка')
+        return
+    for idx, operation in enum_oper:
         msg += f"/op{idx+1}. {operation[0]} {operation[4]} {operation[1]} psc. for {round(operation[2], 2)} {operation[3]} each\n"     #f'/act{idx+1}. {"Покупка" if operation[0] == "buy" else "Продажа"} {operation[4].title()} {operation[1]} {"штука" if operation[1] == 1 else "штук"} на сумму {round(operation[1] * operation[2], 2)}\n'
 
     bot.send_message(message.chat.id, msg)
@@ -100,11 +105,11 @@ def hist_handler(message):
         action = db.operations.get.action(message.chat.id)
         selection = db.operations.get.selection(message.chat.id)
         print(action, selection)
-        if action != None:
+        if action != None and selection != None:
             result = f.edit_operation_handler(selection, action, message.text)
+            db.operations.delete.action(message.chat.id)
+            db.operations.delete.selection(message.chat.id)
             if result == 'success':
-                db.operations.delete.action(message.chat.id)
-                db.operations.delete.selection(message.chat.id)
                 bot.send_message(message.chat.id, 'Готово!')
             else:
                 bot.send_message(message.chat.id, 'Произошла ошибка')

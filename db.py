@@ -8,7 +8,12 @@ cursor = conn.cursor()
 class users():
     # Создает запись о пользователе, если таковой нет
     def create(message):
-        cursor.execute(f"SELECT user_id FROM users WHERE user_id = {message.chat.id}")
+        try:
+            cursor.execute(f"SELECT user_id FROM users WHERE user_id = {message.chat.id}")
+        except:
+            conn.rollback()
+            return
+        
         users_id = cursor.fetchone()
         if users_id == None:
             cursor.execute(f"""INSERT INTO users VALUES({message.chat.id})""")
@@ -109,22 +114,30 @@ class currencies():
 '''INVENTORY'''
 class inventories():
     def edit(user_id, operation_name, quantity, item_id):
-        if operation_name == 'sell':
-            cursor.execute( f"""UPDATE inventories
-                                SET quantity = (quantity - {quantity})
-                                WHERE user_id = {user_id} AND item_id = {item_id}""")
+        a_quantity = inventories.get.available_quantity(user_id, item_id)
+        if a_quantity == None:
+            cursor.execute( f"""INSERT INTO inventories(user_id, item_id, quantity)
+                                VALUES({user_id}, {item_id}, {quantity});""")
         else:
-            cursor.execute( f"""UPDATE inventories
-                                SET quantity = (quantity + {quantity})
-                                WHERE user_id = {user_id} AND item_id = {item_id}""")
+            if operation_name == 'sell':
+                cursor.execute( f"""UPDATE inventories
+                                    SET quantity = (quantity - {quantity})
+                                    WHERE user_id = {user_id} AND item_id = {item_id}""")
+            else:
+                cursor.execute( f"""UPDATE inventories
+                                    SET quantity = (quantity + {quantity})
+                                    WHERE user_id = {user_id} AND item_id = {item_id}""")
         conn.commit()
     
     class get():
         # Принимает айди пользователя и айди предмета. Возвращает допустимое количество предметов на продажу
         def available_quantity(user_id, item_id):
-            cursor.execute(f"SELECT quantity FROM inventories WHERE user_id = {user_id} AND item_id = {item_id}")
-            quantity = cursor.fetchone()
-            return None if quantity == None else quantity[0]
+            try:
+                cursor.execute(f"SELECT quantity FROM inventories WHERE user_id = {user_id} AND item_id = {item_id}")
+                quantity = cursor.fetchone()
+                return None if quantity == None else quantity[0]
+            except:
+                return None
 
 
 '''ITEMS'''
@@ -133,5 +146,5 @@ class items():
         # Принимает аргумент названия предмета и возвращает его id
         def id(item_name):
             cursor.execute(f"""SELECT item_id FROM items WHERE NAME = '{item_name}'""")
-            item_id = cursor.fetchone()[0]
-            return item_id
+            item_id = cursor.fetchone()
+            return None if item_id == None else item_id[0]

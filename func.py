@@ -25,8 +25,13 @@ def sell_possibility(user_id, item_id, quantity):
         return False
 
 def history_operation_selection(message):
-    operations = db.operations.get.list(message)
-    operation = operations[int(message.text[3:])-1]
+    try:
+        operations = db.operations.get.list(message)
+        operation = operations[int(message.text[3:])-1]
+    except:
+        bot.send_message(message.chat.id, 'Произошла ошибка.')
+        return
+    
     bot.send_message(message.chat.id, 'Выберете действие /delete /edit /back')
     bot.send_message(message.chat.id, f'''
 operation:    {operation[0]}
@@ -60,6 +65,9 @@ def history_operation_delete(message):
 
 def edit_operation_handler(oper_id, to_edit, value):
     if to_edit == 'price': #['item_name']
+        if not value.isnumeric() or float(value) < 0:
+            return 'failure'
+        
         db.operations.edit(oper_id, 'price', value)
         result = 'success'
     
@@ -93,6 +101,9 @@ def edit_operation_handler(oper_id, to_edit, value):
     elif to_edit == 'quantity':
         operation = db.operations.get.operation(operation_id=oper_id)
         a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
+
+        if not value.isnumeric() or int(value) < 0:
+            return 'failure'
         
         if (operation[2] == 'buy' and operation[3] < int(value)) or (operation[2] == 'sell' and operation[3] > int(value)):
             if operation[2] == 'buy':
@@ -117,5 +128,36 @@ def edit_operation_handler(oper_id, to_edit, value):
                 result = 'success'
         else:
             result = 'failure'
+    
+    elif to_edit == 'item_name':
+        new_item_id = db.items.get.id(value)
+
+        operation = db.operations.get.operation(operation_id=oper_id)
+        a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
+        new_a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=new_item_id)
+        
+
+        if operation[4] != new_item_id and new_item_id != None:
+            if operation[2] == 'buy':
+                if a_quantiry >= operation[3]:
+                    db.inventories.edit(user_id=operation[1], operation_name='buy', quantity=operation[3], item_id=new_item_id)
+                    db.inventories.edit(user_id=operation[1], operation_name='sell', quantity=operation[3], item_id=operation[4])
+                    db.operations.edit(oper_id, 'item_id', new_item_id)
+                    result = 'success'
+                else:
+                    result = 'failure'
+            else:
+                if new_a_quantiry >= operation[3]:
+                    db.inventories.edit(user_id=operation[1], operation_name='buy', quantity=operation[3], item_id=operation[4])
+                    db.inventories.edit(user_id=operation[1], operation_name='sell', quantity=operation[3], item_id=new_item_id)
+                    db.operations.edit(oper_id, 'item_id', new_item_id)
+                    result = 'success'
+                else:
+                    result = 'failure'
+        else:
+            result = 'failure'
+    else:
+        result = 'failure'
+    
     return result
     
