@@ -71,8 +71,12 @@ def edit_operation_handler(oper_id, to_edit, value):
     
     price_before = operation.quantity * operation.price
 
-    if to_edit == 'price': #['item_name']
-        if not value.isnumeric() or float(value) < 0:
+    print('3.5'.isnumeric())
+    if to_edit == 'price':
+        try:
+            if float(value) <= 0:
+                raise ValueError
+        except:
             return 'failure'
         
         

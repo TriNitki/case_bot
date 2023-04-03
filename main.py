@@ -132,9 +132,9 @@ def hist_handler(message):
             db.operations.delete.action(message.chat.id)
             db.operations.delete.selection(message.chat.id)
             if result == 'success':
-                bot.send_message(message.chat.id, 'Готово!')
+                bot.send_message(message.chat.id, 'Готово!', reply_markup = f.get_menu('main'))
             else:
-                bot.send_message(message.chat.id, 'Произошла ошибка')
+                bot.send_message(message.chat.id, 'Произошла ошибка', reply_markup = f.get_menu('main'))
 
 
 def updater():
