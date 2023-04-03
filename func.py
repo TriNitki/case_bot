@@ -2,14 +2,18 @@ import os
 import telebot
 import requests
 import json
+import math
 
 from dotenv import load_dotenv
+from telebot import types
 
 import db
+import models
 
 load_dotenv()
 
 bot_token = os.getenv("bot_token")
+cur_apikey = os.getenv("cur_apikey")
 bot = telebot.TeleBot(bot_token)
 
 def get_price(currency_id, item_name):
@@ -24,9 +28,9 @@ def sell_possibility(user_id, item_id, quantity):
     else:
         return False
 
-def history_operation_selection(message):
+def history_operation_selection(message):        
     try:
-        operations = db.operations.get.list(message)
+        operations = db.operations.get.list(message.chat.id)
         operation = operations[int(message.text[3:])-1]
     except:
         bot.send_message(message.chat.id, 'Произошла ошибка.')
@@ -38,126 +42,183 @@ operation:    {operation[0]}
 item_name: {operation[4]}
 quantity:      {operation[1]}
 price:              {operation[2]}
-currency:      {operation[3]}''')
-    db.operations.add.selection(message, operation[5])
+currency:      {operation[3]}''', reply_markup=get_menu('oper'))
+    db.operations.add.selection(message.chat.id, operation[5])
 
 def history_operation_edit_handler(message):
-    bot.send_message(message.chat.id, 'Что отредактировать?')
+    bot.send_message(message.chat.id, 'Что отредактировать?', reply_markup=get_menu('oper_edit'))
 
 def history_operation_edit(message):
     bot.send_message(message.chat.id, 'Изменить на какое значение?')
-    db.operations.add.action(message.text, message.chat.id)
-
+    db.operations.add.action(message.chat.id, message.text)
 
 def history_operation_delete(message):
     operation_id = db.operations.get.selection(message.chat.id)
-    operation = db.operations.get.operation(operation_id)
-    a_quantity = db.inventories.get.available_quantity(operation[1], operation[4])
+    operation = models.operation(db.operations.get.operation(operation_id))
+    a_quantity = db.inventories.get.available_quantity(operation.user_id, operation.item_id)
 
-    if operation[2] == 'sell':
-        db.inventories.edit(operation[1], 'buy', operation[3], operation[4])
+    if operation.name == 'sell':
+        db.inventories.edit(operation.user_id, 'buy', operation.quantity, operation.item_id)
         db.operations.delete.operation(operation_id)
-    elif a_quantity >= operation[3]:
-        db.inventories.edit(operation[1], 'sell', operation[3], operation[4])
+    elif a_quantity >= operation.quantity:
+        db.inventories.edit(operation.user_id, 'sell', operation.quantity, operation.item_id)
         db.operations.delete.operation(operation_id)
     else:
         print('no del')
 
 def edit_operation_handler(oper_id, to_edit, value):
+    operation = models.operation(db.operations.get.operation(operation_id=oper_id))
+    
+    price_before = operation.quantity * operation.price
+
     if to_edit == 'price': #['item_name']
         if not value.isnumeric() or float(value) < 0:
             return 'failure'
         
+        
         db.operations.edit(oper_id, 'price', value)
-        result = 'success'
     
     elif to_edit == 'currency':
         cur_id = db.currencies.get.id(value, 'currency_name')
         if cur_id != None:
             db.operations.edit(oper_id, 'currency_id', cur_id)
-            result = 'success'
         else:
-            result = 'failure'
+            return 'failure'
     
     elif to_edit == 'operation':
-        operation = db.operations.get.operation(operation_id=oper_id)
-        a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
+        a_quantiry = db.inventories.get.available_quantity(operation.user_id, operation.item_id)
         if value not in ['buy', 'sell']:
-            result = 'failure'
-            return result
-        print(a_quantiry, value)
+            return 'failure'
 
-        if value != operation[2]:
-            print(a_quantiry, value, int(operation[3])*2)
-            if value == 'sell' and a_quantiry <= int(operation[3])*2:
-                result = 'failure'
-                return result
-            db.inventories.edit(user_id=operation[1], operation_name=value, quantity=operation[3]*2, item_id=operation[4])
+        if value != operation.name:
+            if value == 'sell' and a_quantiry <= int(operation.quantity)*2:
+                return 'failure'
+            db.inventories.edit(operation.user_id, operation_name=value, quantity=operation.quantity*2, item_id=operation.item_id)
             db.operations.edit(oper_id, 'name', value)
-            result = 'success'
         else:
-            result = 'failure'
+            return 'failure'
 
     elif to_edit == 'quantity':
-        operation = db.operations.get.operation(operation_id=oper_id)
-        a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
+        a_quantiry = db.inventories.get.available_quantity(operation.user_id, operation.item_id)
 
         if not value.isnumeric() or int(value) < 0:
             return 'failure'
         
-        if (operation[2] == 'buy' and operation[3] < int(value)) or (operation[2] == 'sell' and operation[3] > int(value)):
-            if operation[2] == 'buy':
-                dif = int(value) - operation[3]
+        if (operation.name == 'buy' and operation.quantity < int(value)) or (operation.name == 'sell' and operation.quantity > int(value)):
+            if operation.name == 'buy':
+                dif = int(value) - operation.quantity
             else:
-                dif = operation[3] - int(value)
+                dif = operation.quantity - int(value)
             
-            db.inventories.edit(user_id=operation[1], operation_name='buy', quantity=dif, item_id=operation[4])
+            db.inventories.edit(operation.user_id, operation_name='buy', quantity=dif, item_id=operation.item_id)
             db.operations.edit(oper_id, 'quantity', value)
-            result = 'success'
-        elif (operation[2] == 'buy' and operation[3] > int(value)) or (operation[2] == 'sell' and operation[3] < int(value)):
-            if operation[2] == 'buy':
-                dif = operation[3] - int(value)
+        elif (operation.name == 'buy' and operation.quantity > int(value)) or (operation.name == 'sell' and operation.quantity < int(value)):
+            if operation.name == 'buy':
+                dif = operation.quantity - int(value)
             else:
-                dif = int(value) - operation[3]
+                dif = int(value) - operation.quantity
             
             if dif > a_quantiry:
-                result = 'failure'
+                return 'failure'
             else:
-                db.inventories.edit(user_id=operation[1], operation_name='sell', quantity=dif, item_id=operation[4])
+                db.inventories.edit(operation.user_id, operation_name='sell', quantity=dif, item_id=operation.item_id)
                 db.operations.edit(oper_id, 'quantity', value)
-                result = 'success'
         else:
-            result = 'failure'
+            return 'failure'
     
     elif to_edit == 'item_name':
         new_item_id = db.items.get.id(value)
 
-        operation = db.operations.get.operation(operation_id=oper_id)
-        a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=operation[4])
-        new_a_quantiry = db.inventories.get.available_quantity(user_id=operation[1], item_id=new_item_id)
+        a_quantiry = db.inventories.get.available_quantity(operation.user_id, operation.item_id)
+        new_a_quantiry = db.inventories.get.available_quantity(operation.user_id, new_item_id)
         
 
-        if operation[4] != new_item_id and new_item_id != None:
-            if operation[2] == 'buy':
-                if a_quantiry >= operation[3]:
-                    db.inventories.edit(user_id=operation[1], operation_name='buy', quantity=operation[3], item_id=new_item_id)
-                    db.inventories.edit(user_id=operation[1], operation_name='sell', quantity=operation[3], item_id=operation[4])
+        if operation.item_id != new_item_id and new_item_id != None:
+            if operation.name == 'buy':
+                if a_quantiry >= operation.quantity:
+                    db.inventories.edit(operation.user_id, 'buy', operation.quantity, new_item_id)
+                    db.inventories.edit(operation.user_id, 'sell', operation.quantity, operation.item_id)
                     db.operations.edit(oper_id, 'item_id', new_item_id)
-                    result = 'success'
                 else:
-                    result = 'failure'
+                    return 'failure'
             else:
-                if new_a_quantiry >= operation[3]:
-                    db.inventories.edit(user_id=operation[1], operation_name='buy', quantity=operation[3], item_id=operation[4])
-                    db.inventories.edit(user_id=operation[1], operation_name='sell', quantity=operation[3], item_id=new_item_id)
+                if new_a_quantiry >= operation.quantity:
+                    db.inventories.edit(operation.user_id, 'buy', operation.quantity, operation.item_id)
+                    db.inventories.edit(operation.user_id, 'sell', operation.quantity, new_item_id)
                     db.operations.edit(oper_id, 'item_id', new_item_id)
-                    result = 'success'
                 else:
-                    result = 'failure'
+                    return 'failure'
         else:
-            result = 'failure'
+            return 'failure'
     else:
-        result = 'failure'
+        return 'failure'
     
-    return result
+    match operation.name: #operation before
+        case 'buy':
+            db.users.add.expense(operation.user_id, -price_before)
+        case 'sell':
+            db.users.add.income(operation.user_id, -price_before)
     
+    operation = models.operation(db.operations.get.operation(operation_id=oper_id))
+    price_after = operation.quantity * operation.price
+    
+    match operation.name: #operation after
+        case 'buy':
+            db.users.add.expense(operation.user_id, price_after)
+        case 'sell':
+            db.users.add.income(operation.user_id, price_after)
+    
+    return 'success'
+    
+def get_menu(type, data = None):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    back = types.KeyboardButton('/back')
+    delete = types.KeyboardButton('/delete')
+    edit = types.KeyboardButton('/edit')
+
+    stats = types.KeyboardButton('Статистика 📊')
+    buy = types.KeyboardButton('Купить ➕')
+    sell = types.KeyboardButton('Продать ➖')
+    history = types.KeyboardButton('История 📄')
+    inventory = types.KeyboardButton('Инвентарь 📦')
+
+    operation = types.KeyboardButton('operation')
+    item_name = types.KeyboardButton('item_name')
+    quantity = types.KeyboardButton('quantity')
+    price = types.KeyboardButton('price')
+    currency = types.KeyboardButton('currency')
+
+    if type == 'opers':
+        for i in range(int(len(data)/3)):
+            item1 = types.KeyboardButton(data[i*3])
+            item2 = types.KeyboardButton(data[i*3+1])
+            item3 = types.KeyboardButton(data[i*3+2])
+            markup.add(item1, item2, item3)
+        last_line = math.ceil(len(data)/3)-1
+        if len(data) % 3 == 1:
+            markup.add(data[last_line*3])
+        elif len(data) % 3 == 2:
+            markup.add(data[last_line*3], data[last_line*3+1])
+        markup.add(back)
+        return markup
+    elif type == 'oper':
+        markup.add(edit, delete, back)
+        return markup
+    elif type == 'oper_edit':
+        markup.add(operation, item_name, quantity, price, currency)
+        return markup
+    elif type == 'main':
+        markup.add(stats)
+        markup.add(buy, sell)
+        markup.add(history, inventory)
+        return markup
+
+
+def update_currency():
+    req = requests.get(f'https://api.freecurrencyapi.com/v1/latest?apikey={cur_apikey}&currencies=USD%2CGBP%2CEUR%2CRUB%2CPLN%2CJPY%2CCNY')
+    currencies = json.loads(req.text)['data']
+    db.update_cur(currencies)
+
+def update_items():
+    pass

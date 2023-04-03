@@ -1,18 +1,26 @@
-import db
+from datetime import datetime
 
+import db
 import func as f
 
 class operation():
-    def __init__(self) -> None:
-        self.user_id = None
-        self.name = None
-        self.item_id = None
+    def __init__(self, DATA = None) -> None:
+        if DATA != None:
+            self.id, self.user_id, self.name, self.quantity, self.item_id, self.price, self.currency_id, self.datetime = DATA
+        else:
+            self.id = None
+            self.user_id = None
+            self.name = None
+            self.quantity = None
+            self.item_id = None
+            self.price = None
+            self.currency_id = None
+            self.datetime = None
+
         self.item_name = None
-        self.quantity = None
-        self.price = None
-        self.currency_id = None
         self.currency_name = None
         self.possibility = None
+       
     
     def define(self, message):
         try:
@@ -23,6 +31,7 @@ class operation():
             self.item_name = args[0]
             self.item_id = db.items.get.id(args[0])
             self.quantity = int(args[1])
+            self.datetime = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             
             try:
                 self.currency_name = args[3]
@@ -53,10 +62,12 @@ class operation():
             print(e)
             self.possibility = False
 
-
-    def get_all(self):
-        return {'user_id': self.user_id, 'name': self.name, 'item_id': self.item_id, 'quantity': self.quantity, 'price': self.price,  'currency_id': self.currency_id}
-
-        
-
-
+class inventory():
+    def __init__(self) -> None:
+        self.user_id = None
+        self.inventory_id = None
+        self.item_name = None
+        self.quantity = None
+    
+    def new(self, args):
+        self.user_id, self.inventory_id, self.item_name, self.quantity = args
