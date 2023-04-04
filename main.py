@@ -19,6 +19,10 @@ bot = telebot.TeleBot(bot_token)
 
 operation = models.operation()
 
+if db.get_time() >= 1:
+    f.update_currency()
+    f.update_items()
+
 @bot.message_handler(commands=['start'])
 def start(message):
     db.users.create(message.chat.id)

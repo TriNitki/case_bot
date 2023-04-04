@@ -3,6 +3,7 @@ import telebot
 import requests
 import json
 import math
+import time
 
 from dotenv import load_dotenv
 from telebot import types
@@ -14,10 +15,11 @@ load_dotenv()
 
 bot_token = os.getenv("bot_token")
 cur_apikey = os.getenv("cur_apikey")
+
 bot = telebot.TeleBot(bot_token)
 
 def get_price(currency_id, item_name):
-    req = requests.get(f'https://steamcommunity.com/market/priceoverview/?currency={currency_id}&appid=730&market_hash_name={item_name.title().replace(" ", "%20")}')
+    req = requests.get(f'https://steamcommunity.com/market/priceoverview/?currency={currency_id}&appid=730&market_hash_name={item_name.title().replace(" ", "%20").replace("&", "%26")}')
     price = float(json.loads(req.text)['median_price'][1:])
     return price
 
@@ -71,7 +73,6 @@ def edit_operation_handler(oper_id, to_edit, value):
     
     price_before = operation.quantity * operation.price
 
-    print('3.5'.isnumeric())
     if to_edit == 'price':
         try:
             if float(value) <= 0:
@@ -222,7 +223,8 @@ def get_menu(type, data = None):
 def update_currency():
     req = requests.get(f'https://api.freecurrencyapi.com/v1/latest?apikey={cur_apikey}&currencies=USD%2CGBP%2CEUR%2CRUB%2CPLN%2CJPY%2CCNY')
     currencies = json.loads(req.text)['data']
-    db.update_cur(currencies)
+    db.currencies.set.rate(currencies)
 
 def update_items():
-    pass
+    item_names = [item[0] for item in db.items.get.all_names()]
+    db.prices.set.price(item_names)

@@ -2,6 +2,8 @@ import psycopg2
 import os
 from datetime import datetime
 
+import func as f
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -155,6 +157,23 @@ class currencies():
             cursor.execute(f"SELECT name FROM currencies WHERE currency_id = {cur_id}")
             currencies_name = cursor.fetchone()
             return None if currencies_name == None else currencies_name[0]
+    
+    class set():
+        def rate(currencies):
+            last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+            for cur_name, cur_rate in currencies.items():
+                cursor.execute(f"""
+                            UPDATE currency_rates
+                            SET rate_to_usd = {cur_rate}, last_update = '{last_update}'
+                            WHERE currency_id = (
+                                SELECT currency_id 
+                                FROM currencies 
+                                WHERE name = '{cur_name.lower()}'
+                            );
+                            """)
+    
+    conn.commit()
 
 
 '''INVENTORY'''
@@ -168,7 +187,7 @@ class inventories():
                            """)
         else:
             if operation_name == 'sell':
-                cursor.execute( f"""
+                cursor.execute(f"""
                                UPDATE inventories
                                SET quantity = (quantity - {quantity})
                                WHERE user_id = {user_id} AND item_id = {item_id}
@@ -207,23 +226,45 @@ class items():
     class get():
         # Принимает аргумент названия предмета и возвращает его id
         def id(item_name):
-            cursor.execute(f"""SELECT item_id FROM items WHERE NAME = '{item_name}'""")
+            cursor.execute(f"SELECT item_id FROM items WHERE NAME = '{item_name}'")
             item_id = cursor.fetchone()
             return None if item_id == None else item_id[0]
 
-def update_cur(currencies):
-    last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        def all_names():
+            cursor.execute("SELECT name FROM items")
+            item_names = cursor.fetchall()
+            return item_names
 
-    for cur_name, cur_rate in currencies.items():
-        cursor.execute(f"""
-                       UPDATE currency_rates
-                       SET rate_to_usd = {cur_rate}, last_update = '{last_update}'
-                       WHERE currency_id = (
-                           SELECT currency_id 
-                           FROM currencies 
-                           WHERE name = '{cur_name.lower()}'
-                       );
-                       """)
-    
-    conn.commit()
-    
+class prices():
+    class set():
+        def price(item_names):
+            for item_name in item_names:
+                price = f.get_price(1, item_name)
+                last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                item_id = items.get.id(item_name)
+                
+                cursor.execute(f"SELECT * FROM item_prices WHERE item_id = {item_id}")
+                status = cursor.fetchone()
+                
+                if status == None:
+                    cursor.execute(f"""
+                                INSERT INTO item_prices 
+                                VALUES(
+                                    {item_id},
+                                    {price},
+                                    '{last_update}'
+                                );
+                                """)
+                else:
+                    cursor.execute(f"""
+                                UPDATE item_prices
+                                SET price = {price}, last_update = '{last_update}'
+                                WHERE item_id = {item_id}
+                                """)
+                
+                conn.commit()
+
+def get_time():
+    cursor.execute(f"SELECT '{datetime.now()}'-last_update FROM currency_rates WHERE currency_id = 1")
+    data = cursor.fetchone()[0]
+    return data.seconds//3600
