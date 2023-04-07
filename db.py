@@ -49,6 +49,15 @@ class users():
                            WHERE user_id = {user_id};
                            """)
             conn.commit()
+    
+    class set():
+        def assets(assets):
+            last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            
+            for asset in assets:
+                logs.log.user_asset(asset[0], asset[1], last_update)
+            
+            conn.commit()
 
 
 '''OPERATIONS'''
@@ -219,6 +228,16 @@ class inventories():
                            """)
             inventory = cursor.fetchall()
             return [inventory] if type(inventory) == tuple else inventory
+        
+        def assets():
+            cursor.execute(f"""
+                           SELECT user_id, SUM(quantity * price) AS asset
+                           FROM inventories
+                           LEFT JOIN item_prices USING(item_id)
+                           GROUP BY user_id;
+                           """)
+            assets = cursor.fetchall()
+            return assets
 
 
 '''ITEMS'''
@@ -235,6 +254,7 @@ class items():
             item_names = cursor.fetchall()
             return item_names
 
+'''PRICES'''
 class prices():
     class set():
         def price(item_names):
@@ -250,20 +270,40 @@ class prices():
                     cursor.execute(f"""
                                 INSERT INTO item_prices 
                                 VALUES(
-                                    {item_id},
-                                    {price},
-                                    '{last_update}'
+                                    {item_id}, {price}, '{last_update}'
                                 );
                                 """)
                 else:
                     cursor.execute(f"""
                                 UPDATE item_prices
                                 SET price = {price}, last_update = '{last_update}'
-                                WHERE item_id = {item_id}
+                                WHERE item_id = {item_id};
                                 """)
-                
-                conn.commit()
+                    
+                logs.log.item_price(item_id, price, last_update)
+            
+            conn.commit()
 
+
+class logs():
+    class log():
+        def item_price(item_id, price, last_update):
+            cursor.execute(f"""
+                            INSERT INTO item_price_logs(item_id, price, update)
+                            VALUES(
+                                {item_id}, {price}, '{last_update}'
+                            );
+                            """)
+        
+        def user_asset(user_id, asset, last_update):
+            stats = users.get.stats(user_id)
+            cursor.execute(f"""
+                            INSERT INTO user_asset_logs(user_id, asset, update)
+                            VALUES(
+                                {user_id}, {asset + stats['income'] - stats['expense']}, '{last_update}'
+                            );
+                            """)
+    
 def get_time():
     cursor.execute(f"SELECT '{datetime.now()}'-last_update FROM currency_rates WHERE currency_id = 1")
     data = cursor.fetchone()[0]

@@ -3,7 +3,6 @@ import telebot
 import requests
 import json
 import math
-import time
 
 from dotenv import load_dotenv
 from telebot import types
@@ -219,8 +218,7 @@ def get_menu(type, data = None):
         markup.add(history, inventory)
         return markup
 
-
-def update_currency():
+def update_currencies():
     req = requests.get(f'https://api.freecurrencyapi.com/v1/latest?apikey={cur_apikey}&currencies=USD%2CGBP%2CEUR%2CRUB%2CPLN%2CJPY%2CCNY')
     currencies = json.loads(req.text)['data']
     db.currencies.set.rate(currencies)
@@ -228,3 +226,10 @@ def update_currency():
 def update_items():
     item_names = [item[0] for item in db.items.get.all_names()]
     db.prices.set.price(item_names)
+
+def update_assets():
+    assets = db.inventories.get.assets()
+    db.users.set.assets(assets)
+        
+        
+    

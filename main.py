@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 
 from dotenv import load_dotenv
-from telebot import types
 
 import models
 import db
@@ -20,8 +19,9 @@ bot = telebot.TeleBot(bot_token)
 operation = models.operation()
 
 if db.get_time() >= 1:
-    f.update_currency()
+    f.update_currencies()
     f.update_items()
+    f.update_assets()
 
 @bot.message_handler(commands=['start'])
 def start(message):
