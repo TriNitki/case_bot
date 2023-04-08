@@ -18,10 +18,11 @@ bot = telebot.TeleBot(bot_token)
 
 operation = models.operation()
 
-if db.get_time() >= 1:
-    f.update_currencies()
-    f.update_items()
-    f.update_assets()
+'''
+f.update_currencies()
+f.update_items()
+f.update_assets()
+'''
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -46,7 +47,7 @@ def buysell(message):
 
     if operation.possibility:
         db.operations.new(operation)
-        bot.send_message(message.chat.id, f'Вы успешно {"продали" if operation.name == "sell" else "купили"} {operation.item_name.title()} в количестве {operation.quantity} на сумму {round(operation.quantity * operation.price, 2)} {operation.currency_name}!')
+        bot.send_message(message.chat.id, f'Вы успешно {"продали" if operation.name == "sell" else "купили"} {operation.item_name.title()} в количестве {operation.quantity} на сумму {round(operation.quantity * operation.price * float(db.currencies.get.rate(operation.currency_id)), 2)}{operation.currency_symbol}!')
     else:
         bot.send_message(message.chat.id, f'Введена неверная команда или количество!')
 
@@ -78,7 +79,7 @@ def history(message):
         bot.send_message(message.chat.id, 'Произошла ошибка')
         return
     for idx, operation in enum_oper:
-        msg += f"/op{idx+1}. {operation[0]} {operation[4]} {operation[1]} psc. for {round(operation[2], 2)} {operation[3]} each\n"     #f'/act{idx+1}. {"Покупка" if operation[0] == "buy" else "Продажа"} {operation[4].title()} {operation[1]} {"штука" if operation[1] == 1 else "штук"} на сумму {round(operation[1] * operation[2], 2)}\n'
+        msg += f"/op{idx+1}. {operation[0]} {operation[4]} {operation[1]} psc. for {round(operation[2]*operation[6], 2)} {operation[3]} each\n"     #f'/act{idx+1}. {"Покупка" if operation[0] == "buy" else "Продажа"} {operation[4].title()} {operation[1]} {"штука" if operation[1] == 1 else "штук"} на сумму {round(operation[1] * operation[2], 2)}\n'
         data.append(f"/op{idx+1}")
     
     bot.send_message(message.chat.id, msg, reply_markup=f.get_menu('opers', data))

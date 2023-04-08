@@ -3,6 +3,7 @@ import telebot
 import requests
 import json
 import math
+import re
 
 from dotenv import load_dotenv
 from telebot import types
@@ -19,7 +20,7 @@ bot = telebot.TeleBot(bot_token)
 
 def get_price(currency_id, item_name):
     req = requests.get(f'https://steamcommunity.com/market/priceoverview/?currency={currency_id}&appid=730&market_hash_name={item_name.title().replace(" ", "%20").replace("&", "%26")}')
-    price = float(json.loads(req.text)['median_price'][1:])
+    price = float(re.sub("[^0-9.]", "", json.loads(req.text)['median_price']))
     return price
 
 def sell_possibility(user_id, item_id, quantity):
@@ -42,7 +43,7 @@ def history_operation_selection(message):
 operation:    {operation[0]}
 item_name: {operation[4]}
 quantity:      {operation[1]}
-price:              {operation[2]}
+price:              {round(operation[2] * operation[6], 2)}
 currency:      {operation[3]}''', reply_markup=get_menu('oper'))
     db.operations.add.selection(message.chat.id, operation[5])
 
@@ -86,6 +87,8 @@ def edit_operation_handler(oper_id, to_edit, value):
         cur_id = db.currencies.get.id(value, 'currency_name')
         if cur_id != None:
             db.operations.edit(oper_id, 'currency_id', cur_id)
+            db.operations.edit(oper_id, 'price', operation.price * db.currencies.get.rate(operation.currency_id) / db.currencies.get.rate(cur_id))
+            
         else:
             return 'failure'
     

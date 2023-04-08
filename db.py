@@ -65,9 +65,9 @@ class operations():
     # Создает новое действие
     def new(operation):
         cursor.execute(f"""
-                       INSERT INTO operations(user_id, name, quantity, item_id, price, currency_id, datetime)
+                       INSERT INTO operations(user_id, name, quantity, item_id, price, datetime, currency_id)
                        VALUES({operation.user_id}, '{operation.name}', {operation.quantity}, {operation.item_id}, 
-                       {operation.price}, {operation.currency_id}, '{operation.datetime}');
+                       {operation.price}, '{operation.datetime}', {operation.currency_id});
                        """)
         
         if operation.name == 'sell':
@@ -100,10 +100,11 @@ class operations():
         # Возвращает список всех транзакций пользователя
         def list(user_id):
             cursor.execute(f"""
-                           SELECT operations.name, operations.quantity, operations.price, currencies.name, items.name, operations.operation_id
+                           SELECT operations.name, operations.quantity, operations.price, currencies.name, items.name, operations.operation_id, rate_to_usd
                            FROM operations
                            LEFT JOIN items USING(item_id)
                            LEFT JOIN currencies USING(currency_id)
+                           LEFT JOIN currency_rates USING(currency_id)
                            WHERE user_id = {user_id}
                            ORDER BY operations.datetime DESC;
                            """)
@@ -166,6 +167,16 @@ class currencies():
             cursor.execute(f"SELECT name FROM currencies WHERE currency_id = {cur_id}")
             currencies_name = cursor.fetchone()
             return None if currencies_name == None else currencies_name[0]
+        
+        def rate(cur_id):
+            cursor.execute(f"SELECT rate_to_usd FROM currency_rates WHERE currency_id = {cur_id}")
+            cur_rate = cursor.fetchone()
+            return None if cur_rate == None else cur_rate[0]
+        
+        def symbol(cur_id):
+            cursor.execute(f"SELECT symbol FROM currencies WHERE currency_id = {cur_id}")
+            symbol = cursor.fetchone()
+            return None if symbol == None else symbol[0]
     
     class set():
         def rate(currencies):
@@ -173,16 +184,32 @@ class currencies():
 
             for cur_name, cur_rate in currencies.items():
                 cursor.execute(f"""
-                            UPDATE currency_rates
-                            SET rate_to_usd = {cur_rate}, last_update = '{last_update}'
-                            WHERE currency_id = (
-                                SELECT currency_id 
-                                FROM currencies 
-                                WHERE name = '{cur_name.lower()}'
-                            );
-                            """)
+                               SELECT currency_id
+                               FROM currencies 
+                               WHERE name = '{cur_name.lower()}'
+                               """)
+                cur_id = cursor.fetchone()[0]
+                
+                cursor.execute(f"""
+                               SELECT currency_id 
+                               FROM currency_rates 
+                               WHERE currency_id = {cur_id}
+                               """)
+                data = cursor.fetchone()
+                
+                if data == None:
+                    cursor.execute(f"""
+                                   INSERT INTO currency_rates(currency_id, rate_to_usd, last_update)
+                                   VALUES ({cur_id}, {cur_rate}, '{last_update}')
+                                   """)
+                else:
+                    cursor.execute(f"""
+                                   UPDATE currency_rates
+                                   SET rate_to_usd = {cur_rate}, last_update = '{last_update}'
+                                   WHERE currency_id = {cur_id}
+                                   """)
     
-    conn.commit()
+            conn.commit()
 
 
 '''INVENTORY'''
@@ -303,8 +330,3 @@ class logs():
                                 {user_id}, {asset + stats['income'] - stats['expense']}, '{last_update}'
                             );
                             """)
-    
-def get_time():
-    cursor.execute(f"SELECT '{datetime.now()}'-last_update FROM currency_rates WHERE currency_id = 1")
-    data = cursor.fetchone()[0]
-    return data.seconds//3600

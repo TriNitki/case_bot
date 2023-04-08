@@ -14,11 +14,11 @@ class operation():
             self.quantity = None
             self.item_id = None
             self.price = None
-            self.currency_id = None
             self.datetime = None
+            self.currency_id = None
 
+        self.currency_symbol = None
         self.item_name = None
-        self.currency_name = None
         self.possibility = None
        
     
@@ -34,23 +34,25 @@ class operation():
             self.datetime = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             
             try:
-                self.currency_name = args[3]
-                data = db.currencies.get.id(self.currency_name, 'currency_name')
-                self.currency_id = int(data)
+                currency_name = args[3]
+                self.currency_id = db.currencies.get.id(currency_name, 'currency_name')
             except:
-                data = db.currencies.get.id(self.user_id, 'user_id')
-                
-                if data == None:
-                    self.currency_id = 1
-                else:
-                    self.currency_id = int(data)
-                
-                self.currency_name = db.currencies.get.name(self.currency_id)
+                self.currency_id = db.currencies.get.id(self.user_id, 'user_id')
+            
+            self.currency_symbol = db.currencies.get.symbol(self.currency_id)
+            
+            if self.currency_id == 1:
+                usd_rate = 1
+            else:
+                usd_rate = float(db.currencies.get.rate(self.currency_id))
+            
+            
             
             try:
-                self.price = float(args[2])
+                self.price = float(args[2]) / usd_rate
             except:
-                self.price = f.get_price(self.currency_id, self.item_name)
+                self.price = f.get_price(1, self.item_name)
+            
             
             if msg[0] in ['s', 'sold','sell']:
                 self.name = 'sell'

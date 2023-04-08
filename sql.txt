@@ -1,0 +1,317 @@
+-- Database: csbot
+
+-- DROP DATABASE IF EXISTS csbot;
+
+CREATE DATABASE csbot
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'Russian_Russia.1251'
+    LC_CTYPE = 'Russian_Russia.1251'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+
+
+
+-- Table: public.currencies
+
+-- DROP TABLE IF EXISTS public.currencies;
+
+CREATE TABLE IF NOT EXISTS public.currencies
+(
+    currency_id smallint NOT NULL,
+    name character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    symbol character varying(5) COLLATE pg_catalog."default",
+    CONSTRAINT currencies_pkey PRIMARY KEY (currency_id),
+    CONSTRAINT "unique_сurrencies_currency_id" UNIQUE (currency_id),
+    CONSTRAINT "unique_сurrencies_name" UNIQUE (name)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.currencies
+    OWNER to postgres;
+
+
+
+
+-- Table: public.users
+
+-- DROP TABLE IF EXISTS public.users;
+
+CREATE TABLE IF NOT EXISTS public.users
+(
+    user_id integer NOT NULL,
+    currency_id integer DEFAULT 1,
+    selection integer,
+    action character varying(16) COLLATE pg_catalog."default",
+    expense numeric NOT NULL DEFAULT '0'::numeric,
+    income numeric NOT NULL DEFAULT '0'::numeric,
+    CONSTRAINT users_pkey PRIMARY KEY (user_id),
+    CONSTRAINT lnk_currencies_users FOREIGN KEY (currency_id)
+        REFERENCES public.currencies (currency_id) MATCH FULL
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.users
+    OWNER to postgres;
+
+
+
+
+-- Table: public.items
+
+-- DROP TABLE IF EXISTS public.items;
+
+CREATE TABLE IF NOT EXISTS public.items
+(
+    item_id serial NOT NULL,
+    name character varying(32) COLLATE pg_catalog."default" NOT NULL,
+    stattrak boolean NOT NULL,
+    wear character varying(16) COLLATE pg_catalog."default",
+    type character varying(16) COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT items_pkey PRIMARY KEY (item_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.items
+    OWNER to postgres;
+
+
+
+
+-- Table: public.operations
+
+-- DROP TABLE IF EXISTS public.operations;
+
+CREATE TABLE IF NOT EXISTS public.operations
+(
+    operation_id serial NOT NULL,
+    user_id integer NOT NULL,
+    name character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    quantity smallint NOT NULL,
+    item_id integer NOT NULL,
+    price numeric NOT NULL,
+    currency_id integer NOT NULL,
+    datetime timestamp with time zone NOT NULL,
+    CONSTRAINT operations_pkey PRIMARY KEY (operation_id),
+    CONSTRAINT lnk_currencies_operations FOREIGN KEY (currency_id)
+        REFERENCES public.currencies (currency_id) MATCH FULL
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT lnk_items_operations FOREIGN KEY (item_id)
+        REFERENCES public.items (item_id) MATCH FULL
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT lnk_users_operations FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH FULL
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.operations
+    OWNER to postgres;
+-- Index: index_currencies_id
+
+-- DROP INDEX IF EXISTS public.index_currencies_id;
+
+CREATE INDEX IF NOT EXISTS index_currencies_id
+    ON public.operations USING btree
+    (currency_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: index_items_id
+
+-- DROP INDEX IF EXISTS public.index_items_id;
+
+CREATE INDEX IF NOT EXISTS index_items_id
+    ON public.operations USING btree
+    (item_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: index_users_id1
+
+-- DROP INDEX IF EXISTS public.index_users_id1;
+
+CREATE INDEX IF NOT EXISTS index_users_id1
+    ON public.operations USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Table: public.currency_rates
+
+-- DROP TABLE IF EXISTS public.currency_rates;
+
+CREATE TABLE IF NOT EXISTS public.currency_rates
+(
+    currency_id smallint NOT NULL,
+    rate_to_usd numeric NOT NULL,
+    last_update timestamp with time zone NOT NULL,
+    CONSTRAINT currencies_rates_pkey PRIMARY KEY (currency_id),
+    CONSTRAINT unique_currencies_rates_currency_id UNIQUE (currency_id),
+    CONSTRAINT lnk_currencies_currency_rates FOREIGN KEY (currency_id)
+        REFERENCES public.currencies (currency_id) MATCH FULL
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.currency_rates
+    OWNER to postgres;
+
+
+
+
+-- Table: public.inventories
+
+-- DROP TABLE IF EXISTS public.inventories;
+
+CREATE TABLE IF NOT EXISTS public.inventories
+(
+    inventory_id serial NOT NULL,
+    user_id integer NOT NULL,
+    item_id integer NOT NULL,
+    quantity integer NOT NULL,
+    CONSTRAINT inventories_pkey PRIMARY KEY (inventory_id),
+    CONSTRAINT lnk_users_inventories FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH FULL
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.inventories
+    OWNER to postgres;
+-- Index: index_item_id
+
+-- DROP INDEX IF EXISTS public.index_item_id;
+
+CREATE INDEX IF NOT EXISTS index_item_id
+    ON public.inventories USING btree
+    (item_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: index_users_id
+
+-- DROP INDEX IF EXISTS public.index_users_id;
+
+CREATE INDEX IF NOT EXISTS index_users_id
+    ON public.inventories USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Table: public.user_asset_logs
+
+-- DROP TABLE IF EXISTS public.user_asset_logs;
+
+CREATE TABLE IF NOT EXISTS public.user_asset_logs
+(
+    asset_log_id serial NOT NULL,
+    user_id integer NOT NULL,
+    asset numeric NOT NULL,
+    update timestamp with time zone NOT NULL
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.user_asset_logs
+    OWNER to postgres;
+-- Index: index_user_id
+
+-- DROP INDEX IF EXISTS public.index_user_id;
+
+CREATE INDEX IF NOT EXISTS index_user_id
+    ON public.user_asset_logs USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Table: public.item_price_logs
+
+-- DROP TABLE IF EXISTS public.item_price_logs;
+
+CREATE TABLE IF NOT EXISTS public.item_price_logs
+(
+    price_log_id serial NOT NULL,
+    item_id integer NOT NULL,
+    price numeric NOT NULL,
+    update timestamp with time zone NOT NULL
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.item_price_logs
+    OWNER to postgres;
+-- Index: index_item_id1
+
+-- DROP INDEX IF EXISTS public.index_item_id1;
+
+CREATE INDEX IF NOT EXISTS index_item_id1
+    ON public.item_price_logs USING btree
+    (item_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: index_log_id
+
+-- DROP INDEX IF EXISTS public.index_log_id;
+
+CREATE INDEX IF NOT EXISTS index_log_id
+    ON public.item_price_logs USING btree
+    (price_log_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+
+
+
+
+-- Table: public.item_prices
+
+-- DROP TABLE IF EXISTS public.item_prices;
+
+CREATE TABLE IF NOT EXISTS public.item_prices
+(
+    item_id integer NOT NULL,
+    price numeric NOT NULL,
+    last_update timestamp with time zone NOT NULL,
+    CONSTRAINT unique_item_prices_item_id UNIQUE (item_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.item_prices
+    OWNER to postgres;
+
+
+
+
+
+INSERT INTO currencies VALUES(1, 'usd', '$');
+INSERT INTO currencies VALUES(2, 'gbp', '£');
+INSERT INTO currencies VALUES(3, 'eur', '€');
+INSERT INTO currencies VALUES(5, 'rub', '₽');
+INSERT INTO currencies VALUES(6, 'pln', 'zł');
+INSERT INTO currencies VALUES(8, 'jpy', '¥');
+INSERT INTO currencies VALUES(23, 'cny', '¥');
+
+INSERT INTO items("stattrak", "name", "wear", "type") VALUES
+    (FALSE, 'revolution case', NULL, 'case'),
+    (FALSE, 'recoil case', NULL, 'case'),
+    (FALSE, 'dreams & nightmares case', NULL, 'case'),
+    (FALSE, 'operation riptide case', NULL, 'case'),
+    (FALSE, 'snakebite case', NULL, 'case'),
+    (FALSE, 'operation broken fang case', NULL, 'case'),
+    (FALSE, 'fracture case', NULL, 'case'),
+    (FALSE, 'prisma 2 case', NULL, 'case'),
+    (FALSE, 'clutch case', NULL, 'case');
