@@ -58,14 +58,16 @@ def stats(message):
 
     profit = float(stats['income'] - stats['expense'])
     for item in inv:
-        profit += item[3] * f.get_price(stats['currency_id'], item[2])
+        profit += item[3] * float(db.prices.get.price(item[4])) * float(db.currencies.get.rate(stats['currency_id']))
     
     profit = round(profit, 2)
     
+    cur_symbol = db.currencies.get.symbol(stats["currency_id"])
+    
     if profit < 0:
-        bot.send_message(message.chat.id, f'Твои расходы: {math.fabs(profit)} usd 📉')
+        bot.send_message(message.chat.id, f'Твои расходы: {math.fabs(profit)}{cur_symbol} 📉')
     else:
-        bot.send_message(message.chat.id, f'Твои доходы: {profit} usd 📈')
+        bot.send_message(message.chat.id, f'Твои доходы: {profit}{cur_symbol} 📈')
 
 
 def history(message):
@@ -98,7 +100,8 @@ def inventory(message):
     msg = "Ваш инвентарь:\n"
 
     for item in inventory:
-        msg += f'{item.item_name}: {item.quantity} pcs.\n'
+        if item.quantity > 0:
+            msg += f'{item.item_name}: {item.quantity} pcs.\n'
     
     bot.send_message(message.chat.id, msg)
     

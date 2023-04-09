@@ -248,7 +248,7 @@ class inventories():
         
         def inventory(user_id):
             cursor.execute(f"""
-                           SELECT user_id, inventory_id, items.name, quantity
+                           SELECT user_id, inventory_id, items.name, quantity, item_id
                            FROM inventories
                            LEFT JOIN items USING(item_id)
                            WHERE user_id = {user_id}
@@ -310,6 +310,15 @@ class prices():
                 logs.log.item_price(item_id, price, last_update)
             
             conn.commit()
+    
+    class get():
+        def price(item_id):
+            cursor.execute(f"""
+                           SELECT price
+                           FROM item_prices
+                           WHERE item_id = {item_id}""")
+            price = cursor.fetchone()[0]
+            return price
 
 
 class logs():

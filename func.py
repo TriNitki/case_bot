@@ -62,9 +62,11 @@ def history_operation_delete(message):
     if operation.name == 'sell':
         db.inventories.edit(operation.user_id, 'buy', operation.quantity, operation.item_id)
         db.operations.delete.operation(operation_id)
+        db.users.add.income(operation.user_id, -operation.quantity*operation.price)
     elif a_quantity >= operation.quantity:
         db.inventories.edit(operation.user_id, 'sell', operation.quantity, operation.item_id)
         db.operations.delete.operation(operation_id)
+        db.users.add.expense(operation.user_id, -operation.quantity*operation.price)
     else:
         print('no del')
 

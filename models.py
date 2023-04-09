@@ -72,4 +72,4 @@ class inventory():
         self.quantity = None
     
     def new(self, args):
-        self.user_id, self.inventory_id, self.item_name, self.quantity = args
+        self.user_id, self.inventory_id, self.item_name, self.quantity, self.item_id = args
