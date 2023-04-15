@@ -3,7 +3,9 @@ from PyQt5.QtCore    import QTimer, QDateTime
 from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication, \
     QTextEdit, QPushButton
 
+from datetime import datetime
 import func as f
+
 
 class MyGui(QWidget):
     def __init__(self, *args, **kwargs):
@@ -20,7 +22,10 @@ class MyGui(QWidget):
         layout.addWidget(self.button)
 
         self.timer = QTimer(self)
-        self.timer.setInterval(3600000)                  # интервал времени ожидания в миллисекундах
+        
+        now = datetime.now()
+        delay = 3600000 - int(now.minute * 60000 + now.second * 1000 + now.microsecond / 1000)
+        self.timer.setInterval(delay) # интервал времени ожидания в миллисекундах
         self.timer.timeout.connect(self.displayTime)
 
     def displayTime(self):
@@ -29,7 +34,9 @@ class MyGui(QWidget):
         f.update_currencies()
         f.update_items()
         f.update_assets()
-        
+        now = datetime.now()
+        delay = 3600000 - int(now.minute * 60000 + now.second * 1000 + now.microsecond / 1000)
+        self.timer.setInterval(delay)
         self.textEdit.append('Success')
 
     def onButton(self):

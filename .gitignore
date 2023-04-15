@@ -6,3 +6,4 @@ test.py
 .sqlite3
 .handler-saves/
 __pycache__/
+data.json

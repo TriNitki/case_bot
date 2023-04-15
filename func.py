@@ -5,11 +5,13 @@ import json
 import math
 import re
 
+
 from dotenv import load_dotenv
 from telebot import types
 
 import db
 import models
+import graph
 
 load_dotenv()
 
@@ -20,7 +22,7 @@ bot = telebot.TeleBot(bot_token)
 
 def get_price(currency_id, item_name):
     req = requests.get(f'https://steamcommunity.com/market/priceoverview/?currency={currency_id}&appid=730&market_hash_name={item_name.title().replace(" ", "%20").replace("&", "%26")}')
-    price = float(re.sub("[^0-9.]", "", json.loads(req.text)['median_price']))
+    price = float(re.sub("[^0-9.]", "", json.loads(req.text)['lowest_price']))
     return price
 
 def sell_possibility(user_id, item_id, quantity):
@@ -56,22 +58,24 @@ def history_operation_edit(message):
 
 def history_operation_delete(message):
     operation_id = db.operations.get.selection(message.chat.id)
-    operation = models.operation(db.operations.get.operation(operation_id))
+    operation = models.operation(*db.operations.get.operation(operation_id))
     a_quantity = db.inventories.get.available_quantity(operation.user_id, operation.item_id)
 
     if operation.name == 'sell':
         db.inventories.edit(operation.user_id, 'buy', operation.quantity, operation.item_id)
         db.operations.delete.operation(operation_id)
         db.users.add.income(operation.user_id, -operation.quantity*operation.price)
+        return 'success'
     elif a_quantity >= operation.quantity:
         db.inventories.edit(operation.user_id, 'sell', operation.quantity, operation.item_id)
         db.operations.delete.operation(operation_id)
         db.users.add.expense(operation.user_id, -operation.quantity*operation.price)
+        return 'success'
     else:
-        print('no del')
+        return 'failure'
 
 def edit_operation_handler(oper_id, to_edit, value):
-    operation = models.operation(db.operations.get.operation(operation_id=oper_id))
+    operation = models.operation(*db.operations.get.operation(operation_id=oper_id))
     
     price_before = operation.quantity * operation.price
 
@@ -86,7 +90,7 @@ def edit_operation_handler(oper_id, to_edit, value):
         db.operations.edit(oper_id, 'price', value)
     
     elif to_edit == 'currency':
-        cur_id = db.currencies.get.id(value, 'currency_name')
+        cur_id = db.currencies.get.id(value)
         if cur_id != None:
             db.operations.edit(oper_id, 'currency_id', cur_id)
             db.operations.edit(oper_id, 'price', operation.price * db.currencies.get.rate(operation.currency_id) / db.currencies.get.rate(cur_id))
@@ -168,7 +172,7 @@ def edit_operation_handler(oper_id, to_edit, value):
         case 'sell':
             db.users.add.income(operation.user_id, -price_before)
     
-    operation = models.operation(db.operations.get.operation(operation_id=oper_id))
+    operation = models.operation(*db.operations.get.operation(operation_id=oper_id))
     price_after = operation.quantity * operation.price
     
     match operation.name: #operation after
@@ -229,12 +233,57 @@ def update_currencies():
     db.currencies.set.rate(currencies)
 
 def update_items():
-    item_names = [item[0] for item in db.items.get.all_names()]
+    item_names = db.items.get.all_names()
     db.prices.set.price(item_names)
 
 def update_assets():
     assets = db.inventories.get.assets()
     db.users.set.assets(assets)
         
-        
+def get_steam_inventory(steam_id):
+    req = requests.get(f"https://steamcommunity.com/inventory/{steam_id}/730/2")
+    text = json.loads(req.text)
+    '''with open ('data.json', 'r', encoding='utf-8') as f:
+        text = json.load(f)'''
     
+    descs = text['descriptions']
+    assets = text['assets']
+    
+    result = {}
+    items = []
+    item_names = db.items.get.all_names()
+    
+    for asset in assets:
+        items.append(asset['classid'])
+    
+    for item in descs:
+        if item['tradable'] and item['marketable'] and item["market_hash_name"].lower() in item_names:
+            result[item["market_hash_name"].lower()] = items.count(item["classid"])
+    
+    return result
+
+def graph_handler(data, cur_id, graph_type, item_name=None):
+    graph_value, graph_time = graph_type.split(' ')
+    cur_symbol = db.currencies.get.symbol(cur_id)
+    
+    if cur_id != 1:
+        data = graph_data_to_cur(data, cur_id)
+    
+    if graph_value == 'item':
+        title = f'The price of {item_name} ({graph_time})'
+        ylabel = f'Price ({cur_symbol})'
+    elif graph_value == 'asset':
+        title = f'The price of your assets ({graph_time})'
+        ylabel = f'Assets ({cur_symbol})'
+    
+    if graph_time == '24h':
+        new_graph = graph.daily(data, title, ylabel)
+    elif graph_time in ['7d', '30d']:
+        pass
+    
+    return new_graph
+
+def graph_data_to_cur(data, cur_id):
+    rate = db.currencies.get.rate(cur_id)
+    data = [(item[0], item[1]*rate) for item in data]
+    return data

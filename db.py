@@ -32,6 +32,16 @@ class users():
             cursor.execute(f"SELECT income, expense, currency_id FROM users WHERE user_id = {user_id}")
             stats = cursor.fetchall()[0]
             return {'income': stats[0], 'expense': stats[1], 'currency_id': stats[2]}
+        
+        def steamid(user_id):
+            cursor.execute(f"""
+                           SELECT steam_id
+                           FROM users
+                           WHERE user_id = {user_id};
+                           """)
+            
+            steam_id = cursor.fetchone()
+            return None if steam_id == None else steam_id[0]
     
     class add():
         def expense(user_id, value):
@@ -59,6 +69,22 @@ class users():
             
             conn.commit()
 
+        def steamid(user_id, steam_id):
+            cursor.execute(f"""
+                           UPDATE users
+                           SET steam_id = {steam_id}
+                           WHERE user_id = {user_id};
+                           """)
+            conn.commit()
+        
+        def cur_id(user_id, cur_id):
+            cursor.execute(f"""
+                           UPDATE users
+                           SET currency_id = {cur_id}
+                           WHERE user_id = {user_id};
+                           """)
+            conn.commit()
+            
 
 '''OPERATIONS'''
 class operations():
@@ -112,7 +138,7 @@ class operations():
             return operations
 
         def operation(operation_id):
-            cursor.execute(f"""SELECT * FROM operations WHERE operation_id = {operation_id}""")
+            cursor.execute(f"""SELECT user_id, name, quantity, item_id, price, currency_id, datetime FROM operations WHERE operation_id = {operation_id}""")
             operation = cursor.fetchone()
             return operation
 
@@ -154,11 +180,8 @@ class currencies():
     class get():
         # Получает 2 аргумента. input_data - информация по которой происходит поиск айди валюты
         #                       data_type - тип данных по котором происходит поиск
-        def id(input_data, data_type):
-            if data_type == 'currency_name':
-                cursor.execute(f"SELECT currency_id FROM currencies WHERE name = '{input_data}'")
-            else:
-                cursor.execute(f"SELECT currency_id FROM users WHERE user_id = {input_data}")
+        def id(cur_name):
+            cursor.execute(f"SELECT currency_id FROM currencies WHERE name = '{cur_name}'")
             currencies_id = cursor.fetchone()
             return None if currencies_id == None else currencies_id[0]
 
@@ -278,7 +301,7 @@ class items():
 
         def all_names():
             cursor.execute("SELECT name FROM items")
-            item_names = cursor.fetchall()
+            item_names = [item[0] for item in cursor.fetchall()]
             return item_names
 
 '''PRICES'''
@@ -317,8 +340,8 @@ class prices():
                            SELECT price
                            FROM item_prices
                            WHERE item_id = {item_id}""")
-            price = cursor.fetchone()[0]
-            return price
+            price = cursor.fetchone()
+            return None if price == None else price[0]
 
 
 class logs():
@@ -339,3 +362,26 @@ class logs():
                                 {user_id}, {asset + stats['income'] - stats['expense']}, '{last_update}'
                             );
                             """)
+    
+    class get():
+        class assets():
+            def last24h(user_id):
+                now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                cursor.execute(f"""
+                               SELECT update, asset
+                               FROM user_asset_logs
+                               WHERE '{now}'-"update"<'1 days' AND user_id = {user_id};""")
+                
+                assets = cursor.fetchall()
+                return assets if len(assets) > 1 else None
+
+        class item_prices():
+            def last24h(item_id):
+                now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                cursor.execute(f"""
+                               SELECT update, price
+                               FROM item_price_logs
+                               WHERE '{now}'-"update"<'1 days' AND item_id = {item_id};""")
+                
+                prices = cursor.fetchall()
+                return prices if len(prices) > 1 else None

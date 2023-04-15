@@ -4,11 +4,10 @@ import db
 import func as f
 
 class operation():
-    def __init__(self, DATA = None) -> None:
-        if DATA != None:
-            self.id, self.user_id, self.name, self.quantity, self.item_id, self.price, self.currency_id, self.datetime = DATA
-        else:
-            self.id = None
+    def __init__(self, *DATA) -> None:
+        try:
+            self.user_id, self.name, self.quantity, self.item_id, self.price, self.currency_id, self.datetime = DATA
+        except:
             self.user_id = None
             self.name = None
             self.quantity = None
@@ -33,11 +32,15 @@ class operation():
             self.quantity = int(args[1])
             self.datetime = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             
+            if self.quantity < 1 or self.item_id == None:
+                self.possibility = False
+                return
+            
             try:
                 currency_name = args[3]
-                self.currency_id = db.currencies.get.id(currency_name, 'currency_name')
+                self.currency_id = db.currencies.get.id(currency_name)
             except:
-                self.currency_id = db.currencies.get.id(self.user_id, 'user_id')
+                self.currency_id = db.users.get.stats(self.user_id)['currency_id']
             
             self.currency_symbol = db.currencies.get.symbol(self.currency_id)
             
@@ -51,7 +54,7 @@ class operation():
             try:
                 self.price = float(args[2]) / usd_rate
             except:
-                self.price = f.get_price(1, self.item_name)
+                self.price = db.prices.get.price(self.item_id)
             
             
             if msg[0] in ['s', 'sold','sell']:
