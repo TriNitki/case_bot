@@ -279,7 +279,7 @@ def graph_handler(data, cur_id, graph_type, item_name=None):
     if graph_time == '24h':
         new_graph = graph.daily(data, title, ylabel)
     elif graph_time in ['7d', '30d']:
-        pass
+        new_graph = graph.weekly(data, title, ylabel)
     
     return new_graph
 

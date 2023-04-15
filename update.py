@@ -30,12 +30,12 @@ class MyGui(QWidget):
 
     def displayTime(self):
         self.label.setText(QDateTime.currentDateTime().toString())
+        now = datetime.now()
+        delay = 3600000 - int(now.minute * 60000 + now.second * 1000 + now.microsecond / 1000)
         """db update"""
         f.update_currencies()
         f.update_items()
         f.update_assets()
-        now = datetime.now()
-        delay = 3600000 - int(now.minute * 60000 + now.second * 1000 + now.microsecond / 1000)
         self.timer.setInterval(delay)
         self.textEdit.append('Success')
 

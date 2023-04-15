@@ -43,10 +43,12 @@ def command_handler(message):
         steamid(message)
     elif any(item in message.text for item in ['/getinv']):
         inv_transfer(message)
-    elif any(item in message.text for item in ['/item']):
+    elif any(item in message.text for item in ['/item ']):
         item_stats(message)
     elif any(item in message.text for item in ['/setcur']):
         setcur(message)
+    elif any(item in message.text for item in ['/item7d']):
+        item_stats_7d(message)
 
 # add buy or sell operation
 def buysell(message):
@@ -221,7 +223,6 @@ def item_stats(message):
             return
     bot.send_message(message.chat.id, 'Произошла ошибка!')
     
-        
 
 def setcur(message):
     msg = message.text.split(' ')
@@ -230,6 +231,22 @@ def setcur(message):
         db.users.set.cur_id(message.chat.id, cur_id)
         bot.send_message(message.chat.id, f'Ваша основная валюта была успешна изменена на значение "{msg[1]}"!')
         return
+    bot.send_message(message.chat.id, 'Произошла ошибка!')
+
+
+def item_stats_7d(message):
+    msg = message.text.split(' ')
+    stats = db.users.get.stats(message.chat.id)
+    item_name = ' '.join(msg[1:])
+    item_id = db.items.get.id(item_name)
+
+    if item_id != None:
+        prices = db.logs.get.item_prices.last7d(item_id)
+        new_graph = f.graph_handler(prices, stats["currency_id"], 'item 7d', item_name=item_name.title())
+        
+        if new_graph != None:
+            bot.send_photo(message.chat.id, new_graph)
+            return
     bot.send_message(message.chat.id, 'Произошла ошибка!')
 
 'buy recoil case 5 psc. for 4.00 usd'''

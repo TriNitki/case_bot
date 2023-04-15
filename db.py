@@ -1,6 +1,6 @@
 import psycopg2
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import func as f
 
@@ -308,9 +308,9 @@ class items():
 class prices():
     class set():
         def price(item_names):
+            now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             for item_name in item_names:
                 price = f.get_price(1, item_name)
-                last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                 item_id = items.get.id(item_name)
                 
                 cursor.execute(f"SELECT * FROM item_prices WHERE item_id = {item_id}")
@@ -320,17 +320,25 @@ class prices():
                     cursor.execute(f"""
                                 INSERT INTO item_prices 
                                 VALUES(
-                                    {item_id}, {price}, '{last_update}'
+                                    {item_id}, {price}, '{now}'
                                 );
                                 """)
                 else:
                     cursor.execute(f"""
                                 UPDATE item_prices
-                                SET price = {price}, last_update = '{last_update}'
+                                SET price = {price}, last_update = '{now}'
                                 WHERE item_id = {item_id};
                                 """)
                     
-                logs.log.item_price(item_id, price, last_update)
+                logs.log.item_price(item_id, price, now)
+                
+                if now.hour in [11, 12, 23, 0]:
+                    hour = now.hour if now.minute<2 else now.hour + 1
+                    if hour % 12 == 0:
+                        f.h12_log()
+                    
+                    if hour == 0:
+                        f.h24_log()
             
             conn.commit()
     
@@ -348,7 +356,7 @@ class logs():
     class log():
         def item_price(item_id, price, last_update):
             cursor.execute(f"""
-                            INSERT INTO item_price_logs(item_id, price, update)
+                            INSERT INTO hourly_price_logs(item_id, price, update)
                             VALUES(
                                 {item_id}, {price}, '{last_update}'
                             );
@@ -357,7 +365,7 @@ class logs():
         def user_asset(user_id, asset, last_update):
             stats = users.get.stats(user_id)
             cursor.execute(f"""
-                            INSERT INTO user_asset_logs(user_id, asset, update)
+                            INSERT INTO hourly_asset_logs(user_id, asset, update)
                             VALUES(
                                 {user_id}, {asset + stats['income'] - stats['expense']}, '{last_update}'
                             );
@@ -369,8 +377,9 @@ class logs():
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                 cursor.execute(f"""
                                SELECT update, asset
-                               FROM user_asset_logs
-                               WHERE '{now}'-"update"<'1 days' AND user_id = {user_id};""")
+                               FROM hourly_asset_logs
+                               WHERE '{now}'-"update"<'1 days' AND user_id = {user_id};
+                               """)
                 
                 assets = cursor.fetchall()
                 return assets if len(assets) > 1 else None
@@ -380,8 +389,39 @@ class logs():
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                 cursor.execute(f"""
                                SELECT update, price
-                               FROM item_price_logs
-                               WHERE '{now}'-"update"<'1 days' AND item_id = {item_id};""")
+                               FROM hourly_price_logs
+                               WHERE '{now}'-"update"<'1 days' AND item_id = {item_id};
+                               """)
                 
                 prices = cursor.fetchall()
                 return prices if len(prices) > 1 else None
+            
+            def last7d(item_id):
+                now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                cursor.execute(f"""
+                               SELECT update, price
+                               FROM hourly_price_logs
+                               WHERE (EXTRACT(HOUR FROM "update") = 12 or EXTRACT(HOUR FROM "update") = 0) 
+                               AND item_id = {item_id} AND '{now}'-"update"<'7 days 1 hours';
+                               """)
+                
+                pricee = cursor.fetchall()
+                
+                for i, value in enumerate(pricee):
+                    price = value[1]
+                    time = value[0]
+                    cursor.execute(f"""
+                                   SELECT MAX(price), MIN(price)
+                                   FROM hourly_price_logs
+                                   WHERE "update" BETWEEN '{time}' and '{time+timedelta(hours=12)}' AND item_id = {item_id};
+                                   """)
+                    maxmin = cursor.fetchall()
+                    if maxmin != None:
+                        pricee[i] = pricee[i] + maxmin[0]
+                        if i > 0:
+                            pricee[i-1] = pricee[i-1] + (price, )
+                    
+                pricee[-1] = pricee[-1] + (prices.get.price(item_id), )
+                
+                [print(item) for item in pricee]
+                return pricee if len(pricee) > 1 else None
