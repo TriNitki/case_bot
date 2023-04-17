@@ -21,10 +21,12 @@ def daily(data, title, ylabel):
 
     plt.figure(facecolor=(24/255, 37/255, 51/255))
     plt.grid(color=(24/255, 37/255, 51/255), linestyle='-')
+    
+    font = 'sans-serif'
 
-    plt.title(title, color=blue, fontsize=25, style='italic', fontfamily='fantasy')
-    plt.xlabel('Date', color=blue, fontsize=15, fontfamily='fantasy')
-    plt.ylabel(ylabel, color=blue, fontsize=15, fontfamily='fantasy')
+    plt.title(title, color=blue, fontsize=25, fontfamily=font)
+    plt.xlabel('Date', color=blue, fontsize=15, fontfamily=font)
+    plt.ylabel(ylabel, color=blue, fontsize=15, fontfamily=font)
 
     ax = plt.gca()
     ax.set_facecolor((24/255, 37/255, 51/255))
@@ -73,9 +75,11 @@ def weekly(data, title, ylabel):
     plt.figure(facecolor=(24/255, 37/255, 51/255))
     plt.grid(color=(24/255, 37/255, 51/255), linestyle='-')
 
-    plt.title(title, color=blue, fontsize=25, style='italic', fontfamily='fantasy')
-    plt.xlabel('Date', color=blue, fontsize=15, fontfamily='fantasy')
-    plt.ylabel(ylabel, color=blue, fontsize=15, fontfamily='fantasy')
+    font = 'sans-serif'
+
+    plt.title(title, color=blue, fontsize=25, fontfamily=font)
+    plt.xlabel('Date', color=blue, fontsize=15, fontfamily=font)
+    plt.ylabel(ylabel, color=blue, fontsize=15, fontfamily=font)
 
     ax = plt.gca()
     ax.set_facecolor((24/255, 37/255, 51/255))

@@ -30,8 +30,12 @@ class users():
     class get():
         def stats(user_id):
             cursor.execute(f"SELECT income, expense, currency_id FROM users WHERE user_id = {user_id}")
-            stats = cursor.fetchall()[0]
-            return {'income': stats[0], 'expense': stats[1], 'currency_id': stats[2]}
+            try:
+                stats = cursor.fetchall()[0]
+                return {'income': stats[0], 'expense': stats[1], 'currency_id': stats[2]}
+            except:
+                return None
+            
         
         def steamid(user_id):
             cursor.execute(f"""
@@ -288,6 +292,15 @@ class inventories():
                            """)
             assets = cursor.fetchall()
             return assets
+        
+        def inv(user_id):
+            cursor.execute(f"""
+                           SELECT item_id, quantity
+                           FROM inventories
+                           WHERE user_id = {user_id};
+                           """)
+            inventory = cursor.fetchall()
+            return inventory
 
 
 '''ITEMS'''
@@ -295,7 +308,7 @@ class items():
     class get():
         # Принимает аргумент названия предмета и возвращает его id
         def id(item_name):
-            cursor.execute(f"SELECT item_id FROM items WHERE NAME = '{item_name}'")
+            cursor.execute(f"SELECT item_id FROM items WHERE name = '{item_name}'")
             item_id = cursor.fetchone()
             return None if item_id == None else item_id[0]
 
@@ -303,6 +316,11 @@ class items():
             cursor.execute("SELECT name FROM items")
             item_names = [item[0] for item in cursor.fetchall()]
             return item_names
+        
+        def name(item_id):
+            cursor.execute(f"SELECT name FROM items WHERE item_id = {item_id}")
+            item_name = cursor.fetchone()
+            return None if item_name == None else item_name[0]
 
 '''PRICES'''
 class prices():
@@ -374,7 +392,7 @@ class logs():
                                """)
                 
                 assets = cursor.fetchall()
-                return assets if len(assets) > 1 else None
+                return assets if len(assets) > 0 else None
 
         class item_prices():
             def last24h(item_id):

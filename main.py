@@ -34,7 +34,7 @@ def command_handler(message):
     if any(item in message.text for item in ['/b ', '/buy', '/buoght', '/s ', '/sold','/sell']):
         buysell(message)
     elif any(item in message.text for item in ['/stats', 'Статистика 📊']):
-        stats(message)
+        stats_handler(message)
     elif any(item in message.text for item in ['/history', '/h ', 'История 📄']):
         history(message)
     elif any(item in message.text for item in ['/inventory', '/inv', 'Инвентарь 📦']):
@@ -62,31 +62,71 @@ def buysell(message):
         bot.send_message(message.chat.id, f'Введена неверная команда или количество!')
 
 # show info about user
-def stats(message):
-    stats = db.users.get.stats(message.chat.id)
-    inv = db.inventories.get.inventory(message.chat.id)
-    rate = db.currencies.get.rate(stats['currency_id'])
+def stats_handler(message):
+    def stats_alltime(message):
+        stats = db.users.get.stats(message.chat.id)
+        inv = db.inventories.get.inventory(message.chat.id)
+        rate = db.currencies.get.rate(stats['currency_id'])
 
-    profit = float(stats['income'] - stats['expense']) * float(rate)
-    for item in inv:
-        price = db.prices.get.price(item[4])
-        if price and rate:
-            profit += item[3] * float(price) * float(rate)
+        profit = float(stats['income'] - stats['expense']) * float(rate)
+        for item in inv:
+            price = db.prices.get.price(item[4])
+            if price and rate:
+                profit += item[3] * float(price) * float(rate)
+        
+        profit = round(profit, 2)
+        
+        cur_symbol = db.currencies.get.symbol(stats["currency_id"])
+        
+        if profit < 0:
+            bot.send_message(message.chat.id, f'Твои расходы: {math.fabs(profit)}{cur_symbol} 📉')
+        else:
+            bot.send_message(message.chat.id, f'Твои доходы: {profit}{cur_symbol} 📈')
+        
+        assets = db.logs.get.assets.last24h(user_id=message.chat.id)
+        
+        new_graph = f.graph_handler(assets, stats["currency_id"], 'asset 24h')
+        if new_graph != None:
+            bot.send_photo(message.chat.id, new_graph, reply_markup=f.get_menu('main'))
     
-    profit = round(profit, 2)
+    def stats_24h(message):
+        stats = db.users.get.stats(user_id)
+        assets = db.logs.get.assets.last24h(user_id)
+        
+        if assets == None:
+            msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
+            bot.send_photo(message.chat.id, open(r'plots\blank_graph.png', 'rb'), caption=msg, reply_markup=f.get_menu('main'))
+            return
+        
+        msg = f.get_stats_24h_msg(user_id, stats, assets)
+        new_graph = f.graph_handler(assets, stats["currency_id"], 'asset 24h')
+        if new_graph != None and len(assets) >= 12:
+            bot.send_photo(message.chat.id, new_graph, caption=msg, reply_markup=f.get_menu('main'))
+        else:
+            bot.send_photo(message.chat.id, open(r'plots\blank_graph.png', 'rb'), caption=msg, reply_markup=f.get_menu('main'))
     
-    cur_symbol = db.currencies.get.symbol(stats["currency_id"])
-    
-    assets = db.logs.get.assets.last24h(user_id=message.chat.id)
-    new_graph = f.graph_handler(assets, stats["currency_id"], 'asset 24h')
-    
-    if profit < 0:
-        bot.send_message(message.chat.id, f'Твои расходы: {math.fabs(profit)}{cur_symbol} 📉')
+    if len(message.text.split()) == 2 and message.text.split()[0] == '/stats':
+        user_id = message.text.split()[1]
+        stats_24h(message)
+        return
     else:
-        bot.send_message(message.chat.id, f'Твои доходы: {profit}{cur_symbol} 📈')
+        user_id = message.chat.id
     
-    if new_graph != None:
-        bot.send_photo(message.chat.id, new_graph)
+    if message.text not in ['За 24 часа 🌒', 'За неделю 🌓', 'За месяц 🌔', 'За все время 🌕']:
+        bot.send_message(message.chat.id, 'Выберете временной интервал статистики.', reply_markup=f.get_menu('stats_interval'))
+        bot.register_next_step_handler(message, stats_handler)
+    else:
+        if message.text == 'За 24 часа 🌒':
+            stats_24h(message)
+            return
+        elif message.text == 'За неделю 🌓':
+            return
+        elif message.text == 'За месяц 🌔':
+            return
+        elif message.text == 'За все время 🌕':
+            stats_alltime(message)
+            return
+        
 
 
 def history(message):
