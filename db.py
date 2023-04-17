@@ -331,21 +331,13 @@ class prices():
                                 """)
                     
                 logs.log.item_price(item_id, price, now)
-                
-                if now.hour in [11, 12, 23, 0]:
-                    hour = now.hour if now.minute<2 else now.hour + 1
-                    if hour % 12 == 0:
-                        f.h12_log()
-                    
-                    if hour == 0:
-                        f.h24_log()
             
             conn.commit()
     
     class get():
         def price(item_id):
             cursor.execute(f"""
-                           SELECT price
+                           SELECT price::FLOAT
                            FROM item_prices
                            WHERE item_id = {item_id}""")
             price = cursor.fetchone()
@@ -399,7 +391,7 @@ class logs():
             def last7d(item_id):
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                 cursor.execute(f"""
-                               SELECT update, price
+                               SELECT update, price::FLOAT
                                FROM hourly_price_logs
                                WHERE (EXTRACT(HOUR FROM "update") = 12 or EXTRACT(HOUR FROM "update") = 0) 
                                AND item_id = {item_id} AND '{now}'-"update"<'7 days 1 hours';
@@ -411,7 +403,7 @@ class logs():
                     price = value[1]
                     time = value[0]
                     cursor.execute(f"""
-                                   SELECT MAX(price), MIN(price)
+                                   SELECT MAX(price)::FLOAT, MIN(price)::FLOAT
                                    FROM hourly_price_logs
                                    WHERE "update" BETWEEN '{time}' and '{time+timedelta(hours=12)}' AND item_id = {item_id};
                                    """)
@@ -423,5 +415,4 @@ class logs():
                     
                 pricee[-1] = pricee[-1] + (prices.get.price(item_id), )
                 
-                [print(item) for item in pricee]
                 return pricee if len(pricee) > 1 else None

@@ -2,6 +2,7 @@ import io
 import matplotlib.pyplot as plt
 
 import mplfinance as mpf
+import pandas as pd
 
 
 def daily(data, title, ylabel):
@@ -63,7 +64,7 @@ def weekly(data, title, ylabel):
     values = []
 
     for item in data:
-        time, value = item
+        time, value = item[:2]
         times.append(time.strftime("%d.%m %H:00"))
         values.append(value)
 

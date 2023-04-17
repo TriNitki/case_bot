@@ -22,7 +22,7 @@ bot = telebot.TeleBot(bot_token)
 
 def get_price(currency_id, item_name):
     req = requests.get(f'https://steamcommunity.com/market/priceoverview/?currency={currency_id}&appid=730&market_hash_name={item_name.title().replace(" ", "%20").replace("&", "%26")}')
-    price = float(re.sub("[^0-9.]", "", json.loads(req.text)['lowest_price']))
+    price = float(re.sub("[^0-9.]", "", json.loads(req.text)['median_price']))
     return price
 
 def sell_possibility(user_id, item_id, quantity):

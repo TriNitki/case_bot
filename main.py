@@ -65,11 +65,11 @@ def buysell(message):
 def stats(message):
     stats = db.users.get.stats(message.chat.id)
     inv = db.inventories.get.inventory(message.chat.id)
+    rate = db.currencies.get.rate(stats['currency_id'])
 
-    profit = float(stats['income'] - stats['expense'])
+    profit = float(stats['income'] - stats['expense']) * float(rate)
     for item in inv:
         price = db.prices.get.price(item[4])
-        rate = db.currencies.get.rate(stats['currency_id'])
         if price and rate:
             profit += item[3] * float(price) * float(rate)
     
@@ -249,7 +249,6 @@ def item_stats_7d(message):
             return
     bot.send_message(message.chat.id, 'Произошла ошибка!')
 
-'buy recoil case 5 psc. for 4.00 usd'''
 
 #bot.enable_save_next_step_handlers(delay=2)
 #bot.load_next_step_handlers()
