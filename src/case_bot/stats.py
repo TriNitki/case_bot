@@ -1,6 +1,9 @@
 import math
+import os
+from PIL import Image
 
-import db.items, db.logs, db.currencies, db.inventories
+import graphs
+import db.items, db.logs, db.currencies, db.inventories, db.users
 
 
 def get_24h_msg(user_id, stats, assets):
@@ -136,3 +139,61 @@ def get_7d_msg(user_id, stats, assets):
 
 {item_msg}'''
     return msg
+
+def get_24h(user_id):
+    user_stats = db.users.get_stats(user_id)
+    assets = db.logs.get_assets_last24h(user_id)
+    
+    if assets == None:
+        msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        return msg, new_graph
+    
+    msg = get_24h_msg(user_id, user_stats, assets)
+    new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '24h')
+    if not(new_graph != None and len(assets) >= 12):
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        
+    return msg, new_graph
+
+def get_7d(user_id):
+    user_stats = db.users.get_stats(user_id)
+    assets = db.logs.get_assets_last7d(user_id)
+    
+    if assets == None:
+        msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        return msg, new_graph
+    
+    msg = get_7d_msg(user_id, user_stats, assets)
+    new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '7d')
+    if not(new_graph != None and len(assets) >= 12):
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        
+    return msg, new_graph
+
+'''def stats_alltime(message):
+    stats = db.users.get.stats(message.chat.id)
+    inv = db.inventories.get.inventory(message.chat.id)
+    rate = db.currencies.get.rate(stats['currency_id'])
+
+    profit = float(stats['income'] - stats['expense']) * float(rate)
+    for item in inv:
+        price = db.prices.get.price(item[4])
+        if price and rate:
+            profit += item[3] * float(price) * float(rate)
+    
+    profit = round(profit, 2)
+    
+    cur_symbol = db.currencies.get.symbol(stats["currency_id"])
+    
+    if profit < 0:
+        bot.send_message(message.chat.id, f'Твои расходы: {math.fabs(profit)}{cur_symbol} 📉')
+    else:
+        bot.send_message(message.chat.id, f'Твои доходы: {profit}{cur_symbol} 📈')
+    
+    assets = db.logs.get.assets.last24h(user_id=message.chat.id)
+    
+    new_graph = f.graph_handler(assets, stats["currency_id"], 'asset 24h')
+    if new_graph != None:
+        bot.send_photo(message.chat.id, new_graph, reply_markup=f.get_menu('main'))'''
