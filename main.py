@@ -3,6 +3,8 @@ import telebot
 import math
 from datetime import datetime
 
+from PIL import Image
+
 
 from dotenv import load_dotenv
 
@@ -89,46 +91,11 @@ def stats_handler(message):
         if new_graph != None:
             bot.send_photo(message.chat.id, new_graph, reply_markup=f.get_menu('main'))
     
-    def stats_24h(message):
-        stats = db.users.get.stats(user_id)
-        assets = db.logs.get.assets.last24h(user_id)
-        
-        if assets == None:
-            msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
-            bot.send_photo(message.chat.id, open(r'plots\blank_graph.png', 'rb'), caption=msg, reply_markup=f.get_menu('main'))
-            return
-        
-        msg = f.get_stats_24h_msg(user_id, stats, assets)
-        new_graph = f.graph_handler(assets, stats["currency_id"], 'asset 24h')
-        if new_graph != None and len(assets) >= 12:
-            bot.send_photo(message.chat.id, new_graph, caption=msg, reply_markup=f.get_menu('main'))
-        else:
-            bot.send_photo(message.chat.id, open(r'plots\blank_graph.png', 'rb'), caption=msg, reply_markup=f.get_menu('main'))
-    
-    if len(message.text.split()) == 2 and message.text.split()[0] == '/stats':
-        user_id = message.text.split()[1]
-        stats_24h(message)
-        return
-    else:
-        user_id = message.chat.id
-    
-    if message.text not in ['За 24 часа 🌒', 'За неделю 🌓', 'За месяц 🌔', 'За все время 🌕']:
-        bot.send_message(message.chat.id, 'Выберете временной интервал статистики.', reply_markup=f.get_menu('stats_interval'))
-        bot.register_next_step_handler(message, stats_handler)
-    else:
-        if message.text == 'За 24 часа 🌒':
-            stats_24h(message)
-            return
-        elif message.text == 'За неделю 🌓':
-            return
-        elif message.text == 'За месяц 🌔':
-            return
-        elif message.text == 'За все время 🌕':
-            stats_alltime(message)
-            return
-        
+    if message.text == 'Статистика 📊':
+        msg, new_graph = stats_24h(message.chat.id)
+        bot.send_photo(message.chat.id, caption=msg, photo=new_graph, reply_markup=f.get_keyboard(None))
 
-
+    
 def history(message):
     def hist_handler(message):
         if '/op' in message.text:
@@ -290,6 +257,64 @@ def item_stats_7d(message):
     bot.send_message(message.chat.id, 'Произошла ошибка!')
 
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith('timegap'))
+def callback_worker(call):
+    time_gap = call.data.split('_')[1]
+    if time_gap == "24h":
+        try:
+            msg, new_graph = stats_24h(call.message.chat.id)
+            media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
+            bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id, media=media, reply_markup=f.get_keyboard(None))
+        except Exception as e:
+            print(e)
+    elif time_gap == "7d":
+        #try:
+            msg, new_graph = stats_7d(call.message.chat.id)
+            media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
+            bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id, media=media, reply_markup=f.get_keyboard(None))
+        #except Exception as e:
+        #    print(e)
+        #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='7d', reply_markup=f.get_keyboard(None))
+    elif time_gap == "30d":
+        pass
+        #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='30d', reply_markup=f.get_keyboard(None))
+    elif time_gap == "alltime":
+        pass
+        #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='alltime', reply_markup=f.get_keyboard(None))
+
+
+def stats_24h(user_id):
+    stats = db.users.get.stats(user_id)
+    assets = db.logs.get.assets.last24h(user_id)
+    
+    if assets == None:
+        msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        return msg, new_graph
+    
+    msg = f.get_stats_24h_msg(user_id, stats, assets)
+    new_graph = f.graph_handler(assets, stats["currency_id"], 'asset', '24h')
+    if not(new_graph != None and len(assets) >= 12):
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        
+    return msg, new_graph
+
+def stats_7d(user_id):
+    stats = db.users.get.stats(user_id)
+    assets = db.logs.get.assets.last7d(user_id)
+    
+    if assets == None:
+        msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        return msg, new_graph
+    
+    msg = f.get_stats_7d_msg(user_id, stats, assets)
+    new_graph = f.graph_handler(assets, stats["currency_id"], 'asset', '7d')
+    if not(new_graph != None and len(assets) >= 12):
+        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        
+    return msg, new_graph
+    
 #bot.enable_save_next_step_handlers(delay=2)
 #bot.load_next_step_handlers()
 bot.polling(none_stop=True)

@@ -87,7 +87,7 @@ def weekly(data, title, ylabel):
     ax.spines["top"].set_color(blue)
     ax.spines["left"].set_color(blue)
     ax.spines["right"].set_color(blue)
-    ax.tick_params(axis="x", colors=blue, rotation=20)
+    ax.tick_params(axis="x", colors=blue, rotation=23)
     ax.tick_params(axis="y", colors=blue)
 
 

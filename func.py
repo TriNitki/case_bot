@@ -235,6 +235,17 @@ def get_menu(type, data = None):
         markup.add(time_24h, time_7d, time_30d, all_time)
         return markup
 
+def get_keyboard(type, data = None):
+    keyboard = types.InlineKeyboardMarkup()
+    
+    time_24h  = types.InlineKeyboardButton(text='За 24 часа 🌒', callback_data='timegap_24h')
+    time_7d   = types.InlineKeyboardButton(text='За неделю 🌓', callback_data='timegap_7d')
+    time_30d  = types.InlineKeyboardButton(text='За месяц 🌔', callback_data='timegap_30d')
+    all_time  = types.InlineKeyboardButton(text='За все время 🌕', callback_data='timegap_alltime')
+
+    keyboard.add(time_24h, time_7d, time_30d, all_time)
+    return keyboard
+
 def update_currencies():
     req = requests.get(f'https://api.freecurrencyapi.com/v1/latest?apikey={cur_apikey}&currencies=USD%2CGBP%2CEUR%2CRUB%2CPLN%2CJPY%2CCNY')
     currencies = json.loads(req.text)['data']
@@ -270,8 +281,7 @@ def get_steam_inventory(steam_id):
     
     return result
 
-def graph_handler(data, cur_id, graph_type, item_name=None):
-    graph_value, graph_time = graph_type.split(' ')
+def graph_handler(data, cur_id, graph_value, graph_time, item_name=None):
     cur_symbol = db.currencies.get.symbol(cur_id)
     
     if cur_id != 1:
@@ -306,6 +316,73 @@ def get_stats_24h_msg(user_id, stats, assets):
         item_name = db.items.get.name(item_id).title()
         
         prices = db.logs.get.item_prices.last24h(item_id)
+        price_before = prices[0][1]
+        price_after = prices[-1][1]
+        item_difference = price_after - price_before
+        item_g_rate = item_difference/price_before*100
+        item_growth_rates.append({'item_name': item_name, 'growth_rate': item_g_rate, 'difference': item_difference, 'quantity': item[1]})
+    
+    emoji_nums = ['1️⃣', '2️⃣', '3️⃣']
+    
+    sorted_item_g_rates = sorted(item_growth_rates, key=lambda d: d['growth_rate'], reverse=True)[:3]
+    
+    cur_symbol = db.currencies.get.symbol(stats["currency_id"])
+    cur_rate = db.currencies.get.rate(stats["currency_id"])
+    
+    item_msg = []
+    for i, item in enumerate(sorted_item_g_rates):
+        i_p_or_m = '-' if item['difference'] < 0 else '+'
+        item_msg.append(f"{emoji_nums[i]}  \
+{item['item_name']}\n        ► \
+{i_p_or_m}{math.fabs(round(float(item['growth_rate']), 2))}% \
+({i_p_or_m}{math.fabs(round(item['difference'] * item['quantity'] * cur_rate, 2))} {cur_symbol}) \
+{'📉' if item['growth_rate'] < 0 else '📈'}")
+        
+    item_msg = '\n'.join(item_msg)
+        
+    asset_before = assets[0][1]
+    asset_after = assets[-1][1]
+    difference = asset_after-asset_before
+    growth_rate = difference/asset_before*100
+    p_or_m = '-' if difference < 0 else '+'
+
+    if len(assets) < 12:
+        msg = f"""⁉️ Я еще не успел собрать вашу полную статистику ⁉️
+
+ℹ️ Вот что я пока знаю:
+
+💵 Цена вложений: {round(asset_after * cur_rate, 2)} {cur_symbol}
+💳 Расходы: {round(stats['expense'] * cur_rate, 2)} {cur_symbol}
+
+▪️ Самые лучшие активы: 
+
+{item_msg}"""
+        return msg
+    
+    msg = f'''
+▪️ Изменения цен на активы за последние 24 часа:
+
+💰 Изменение ({cur_symbol}): {p_or_m}{math.fabs(round(difference * cur_rate, 2))} {cur_symbol}
+💯 Изменение (%): {p_or_m}{math.fabs(round(growth_rate, 2))}%
+
+💵 Цена вложений: {round(asset_after * cur_rate, 2)} {cur_symbol}
+💳 Расходы: {round(stats['expense'] * cur_rate, 2)} {cur_symbol}
+
+▪️ Самые лучшие активы: 
+
+{item_msg}'''
+    return msg
+
+def get_stats_7d_msg(user_id, stats, assets):
+    invent = db.inventories.get.inv(user_id)
+    item_growth_rates = []
+    
+    
+    for item in invent:
+        item_id = item[0]
+        item_name = db.items.get.name(item_id).title()
+        
+        prices = db.logs.get.item_prices.last7d(item_id)
         price_before = prices[0][1]
         price_after = prices[-1][1]
         item_difference = price_after - price_before

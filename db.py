@@ -393,6 +393,20 @@ class logs():
                 
                 assets = cursor.fetchall()
                 return assets if len(assets) > 0 else None
+        
+
+            def last7d(user_id):
+                now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                cursor.execute(f"""
+                               SELECT update, asset
+                               FROM hourly_asset_logs
+                               WHERE (EXTRACT(HOUR FROM "update") = 12 or EXTRACT(HOUR FROM "update") = 0) 
+                               AND user_id = {user_id} AND '{now}'-"update"<'7 days 1 hours';
+                               """)
+                
+                assets = cursor.fetchall()
+
+                return assets if len(assets) > 1 else None
 
         class item_prices():
             def last24h(item_id):
@@ -409,7 +423,7 @@ class logs():
             def last7d(item_id):
                 now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                 cursor.execute(f"""
-                               SELECT update, price::FLOAT
+                               SELECT update, price
                                FROM hourly_price_logs
                                WHERE (EXTRACT(HOUR FROM "update") = 12 or EXTRACT(HOUR FROM "update") = 0) 
                                AND item_id = {item_id} AND '{now}'-"update"<'7 days 1 hours';
@@ -417,7 +431,7 @@ class logs():
                 
                 pricee = cursor.fetchall()
                 
-                for i, value in enumerate(pricee):
+                '''for i, value in enumerate(pricee):
                     price = value[1]
                     time = value[0]
                     cursor.execute(f"""
@@ -431,6 +445,6 @@ class logs():
                         if i > 0:
                             pricee[i-1] = pricee[i-1] + (price, )
                     
-                pricee[-1] = pricee[-1] + (prices.get.price(item_id), )
+                pricee[-1] = pricee[-1] + (prices.get.price(item_id), )'''
                 
                 return pricee if len(pricee) > 1 else None
