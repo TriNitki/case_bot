@@ -1,11 +1,13 @@
 import io
 import matplotlib.pyplot as plt
 
+import db.currencies
+
 import mplfinance as mpf
 import pandas as pd
 
 
-def daily(data, title, ylabel):
+def get_daily(data, title, ylabel):
     if data == None:
         return None
 
@@ -58,7 +60,7 @@ def daily(data, title, ylabel):
     img_buf.seek(0)
     return img_buf
 
-def weekly(data, title, ylabel):
+def get_weekly(data, title, ylabel):
     if data == None:
         return None
     
@@ -110,3 +112,28 @@ def weekly(data, title, ylabel):
     
     img_buf.seek(0)
     return img_buf
+
+def handler(data, cur_id, graph_value, graph_time, item_name=None):
+    cur_symbol = db.currencies.get_symbol(cur_id)
+    
+    if cur_id != 1:
+        data = data_to_cur(data, cur_id)
+    
+    if graph_value == 'item':
+        title = f'The price of {item_name} ({graph_time})'
+        ylabel = f'Price ({cur_symbol})'
+    elif graph_value == 'asset':
+        title = f'The price of your assets ({graph_time})'
+        ylabel = f'Assets ({cur_symbol})'
+    
+    if graph_time == '24h':
+        new_graph = get_daily(data, title, ylabel)
+    elif graph_time in ['7d', '30d']:
+        new_graph = get_weekly(data, title, ylabel)
+    
+    return new_graph
+
+def data_to_cur(data, cur_id):
+    rate = db.currencies.get_rate(cur_id)
+    data = [(item[0], item[1]*rate) for item in data]
+    return data

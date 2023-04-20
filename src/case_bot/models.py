@@ -1,7 +1,6 @@
 from datetime import datetime
 
-import db
-import func as f
+import db.inventories
 
 class operation():
     def __init__(self, *DATA) -> None:
@@ -19,7 +18,7 @@ class operation():
         self.currency_symbol = None
         self.item_name = None
         self.possibility = None
-       
+    
     
     def define(self, message):
         try:
@@ -59,7 +58,7 @@ class operation():
             
             if msg[0] in ['s', 'sold','sell']:
                 self.name = 'sell'
-                self.possibility = f.sell_possibility(self.user_id, self.item_id, self.quantity)
+                self.possibility = _sell_possibility(self.user_id, self.item_id, self.quantity)
             else:
                 self.name = 'buy'
                 self.possibility = True
@@ -76,3 +75,10 @@ class inventory():
     
     def new(self, args):
         self.user_id, self.inventory_id, self.item_name, self.quantity, self.item_id = args
+
+def _sell_possibility(user_id, item_id, quantity):
+    a_quantity = db.inventories.get_available_quantity(user_id, item_id)
+    if a_quantity >= quantity:
+        return True
+    else:
+        return False

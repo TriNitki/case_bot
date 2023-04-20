@@ -1,29 +1,23 @@
 import os
 import telebot
+
 import math
 from datetime import datetime
 
 from PIL import Image
 
-
-from dotenv import load_dotenv
-
 import models
-import db
-import func as f
-import graph
+import db.users, db.operations, db.items, db.prices, db.logs, db.currencies
+import histories
+import markups
+import steam
+import graphs
+import stats
 
-load_dotenv()
+from config import bot_token
 
-#bot
-bot_token = os.getenv("bot_token")
 bot = telebot.TeleBot(bot_token)
 
-'''
-f.update_currencies()
-f.update_items()
-f.update_assets()
-'''
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -93,52 +87,52 @@ def stats_handler(message):
     
     if message.text == 'Статистика 📊':
         msg, new_graph = stats_24h(message.chat.id)
-        bot.send_photo(message.chat.id, caption=msg, photo=new_graph, reply_markup=f.get_keyboard(None))
+        bot.send_photo(message.chat.id, caption=msg, photo=new_graph, reply_markup=markups.get_inline_keyboard(None))
 
     
 def history(message):
     def hist_handler(message):
         if '/op' in message.text:
-            f.history_operation_selection(message)
+            histories.operation_selection(message)
             bot.register_next_step_handler(message, hist_handler)
         elif '/edit' in message.text:
-            f.history_operation_edit_handler(message)
+            histories.operation_edit_handler(message)
             bot.register_next_step_handler(message, hist_handler)
         elif '/del' in message.text:
-            result = f.history_operation_delete(message)
+            result = histories.operation_delete(message)
             if result == 'success':
                 bot.send_message(message.chat.id, 'Готово!')
             else:
                 bot.send_message(message.chat.id, 'Произошла ошибка')
-            db.operations.delete.selection(message.chat.id)
+            db.operations.delete_selection(message.chat.id)
             message.text = '/history'
             history(message)
         elif '/back' in message.text:
-            if db.operations.get.selection(message.chat.id):
-                db.operations.delete.selection(message.chat.id)
+            if db.operations.get_selection(message.chat.id):
+                db.operations.delete_selection(message.chat.id)
                 message.text = '/history'
                 history(message)
             else:
-                bot.send_message(message.chat.id, 'Добро пожаловать в главное меню!', reply_markup = f.get_menu('main'))
-                return #return v main
+                bot.send_message(message.chat.id, 'Добро пожаловать в главное меню!', reply_markup=markups.get_reply_keyboard('main'))
+                return
         elif message.text in ['operation', 'item_name', 'quantity', 'price', 'currency']:
-            f.history_operation_edit(message)
+            histories.operation_edit(message)
             bot.register_next_step_handler(message, hist_handler)
         else:
-            action = db.operations.get.action(message.chat.id)
-            selection = db.operations.get.selection(message.chat.id)
+            action = db.operations.get_action(message.chat.id)
+            selection = db.operations.get_selection(message.chat.id)
             if action != None and selection != None:
                 result = f.edit_operation_handler(selection, action, message.text)
-                db.operations.delete.action(message.chat.id)
-                db.operations.delete.selection(message.chat.id)
+                db.operations.delete_action(message.chat.id)
+                db.operations.delete_selection(message.chat.id)
                 if result == 'success':
-                    bot.send_message(message.chat.id, 'Готово!', reply_markup = f.get_menu('main'))
+                    bot.send_message(message.chat.id, 'Готово!', reply_markup=markups.get_reply_keyboard('main'))
                 else:
-                    bot.send_message(message.chat.id, 'Произошла ошибка', reply_markup = f.get_menu('main'))
+                    bot.send_message(message.chat.id, 'Произошла ошибка', reply_markup=markups.get_reply_keyboard('main'))
 
     data = []
     
-    operations = db.operations.get.list(message.chat.id)
+    operations = db.operations.get_list(message.chat.id)
     msg = 'История всех действий:\n\n'
     try:
         enum_oper = enumerate(operations)
@@ -146,10 +140,10 @@ def history(message):
         bot.send_message(message.chat.id, 'Произошла ошибка')
         return
     for idx, operation in enum_oper:
-        msg += f"/op{idx+1}. {operation[0]} {operation[4]} {operation[1]} psc. for {round(operation[2]*operation[6], 2)} {operation[3]} each\n"     #f'/act{idx+1}. {"Покупка" if operation[0] == "buy" else "Продажа"} {operation[4].title()} {operation[1]} {"штука" if operation[1] == 1 else "штук"} на сумму {round(operation[1] * operation[2], 2)}\n'
+        msg += f"/op{idx+1}. {operation[0]} {operation[4]} {operation[1]} psc. for {round(operation[2]*operation[6], 2)} {operation[3]} each\n"
         data.append(f"/op{idx+1}")
     
-    bot.send_message(message.chat.id, msg, reply_markup=f.get_menu('opers', data))
+    bot.send_message(message.chat.id, msg, reply_markup=markups.get_reply_keyboard('opers', data))
     bot.register_next_step_handler(message, hist_handler)
 
 
@@ -192,38 +186,38 @@ def steamid(message):
             pass
     
     if steam_id != None:
-        db.users.set.steamid(message.chat.id, steam_id)
-        bot.send_message(message.chat.id, 'SteamId был успешно добавлен!', reply_markup=f.get_menu('main'))
+        db.users.set_steamid(message.chat.id, steam_id)
+        bot.send_message(message.chat.id, 'SteamId был успешно добавлен!', reply_markup=markups.get_reply_keyboard('main'))
         return
     else:
-        bot.send_message(message.chat.id, 'Произошла ошибка. Введен неверный формат steamid.', reply_markup=f.get_menu('main'))
+        bot.send_message(message.chat.id, 'Произошла ошибка. Введен неверный формат steamid.', reply_markup=markups.get_reply_keyboard('main'))
 
 
 def inv_transfer(message):
-    steam_id = db.users.get.steamid(message.chat.id)
+    steam_id = db.users.get_steamid(message.chat.id)
     if steam_id == None:
         pass
     else:
-        steam_inv = f.get_steam_inventory(steam_id)
+        steam_inv = steam.get_user_inventory(steam_id)
         time_now = datetime.now()
         for item_name, quantity in steam_inv.items():
-            item_id = db.items.get.id(item_name)
+            item_id = db.items.get_id(item_name)
             user_id = message.chat.id
-            price = db.prices.get.price(item_id)
-            cur_id = db.users.get.stats(user_id)['currency_id']
+            price = db.prices.get_price(item_id)
+            cur_id = db.users.get_stats(user_id)['currency_id']
             operation = models.operation(user_id, 'buy', quantity, item_id, price, cur_id, time_now)
             db.operations.new(operation)
-# get info about specific item
-#@bot.message_handler(commands=['info'])
+
+
 def item_stats(message):
     msg = message.text.split(' ')
-    stats = db.users.get.stats(message.chat.id)
+    stats = db.users.get_stats(message.chat.id)
     item_name = ' '.join(msg[1:])
-    item_id = db.items.get.id(item_name)
+    item_id = db.items.get_id(item_name)
 
     if item_id != None:
-        prices = db.logs.get.item_prices.last24h(item_id)
-        new_graph = f.graph_handler(prices, stats["currency_id"], 'item 24h', item_name=item_name.title())
+        prices = db.logs.get_item_prices_last24h(item_id)
+        new_graph = graphs.handler(prices, stats["currency_id"], 'item 24h', item_name=item_name.title())
         
         if new_graph != None:
             bot.send_photo(message.chat.id, new_graph)
@@ -233,9 +227,9 @@ def item_stats(message):
 
 def setcur(message):
     msg = message.text.split(' ')
-    cur_id = db.currencies.get.id(msg[1])
+    cur_id = db.currencies.get_id(msg[1])
     if cur_id != None:
-        db.users.set.cur_id(message.chat.id, cur_id)
+        db.users.set_cur_id(message.chat.id, cur_id)
         bot.send_message(message.chat.id, f'Ваша основная валюта была успешна изменена на значение "{msg[1]}"!')
         return
     bot.send_message(message.chat.id, 'Произошла ошибка!')
@@ -263,53 +257,53 @@ def callback_worker(call):
     if time_gap == "24h":
         try:
             msg, new_graph = stats_24h(call.message.chat.id)
-            media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
-            bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id, media=media, reply_markup=f.get_keyboard(None))
         except Exception as e:
             print(e)
+            return
     elif time_gap == "7d":
-        #try:
+        try:
             msg, new_graph = stats_7d(call.message.chat.id)
-            media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
-            bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id, media=media, reply_markup=f.get_keyboard(None))
-        #except Exception as e:
-        #    print(e)
-        #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='7d', reply_markup=f.get_keyboard(None))
+        except Exception as e:
+            print(e)
+            return
     elif time_gap == "30d":
-        pass
+        return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='30d', reply_markup=f.get_keyboard(None))
     elif time_gap == "alltime":
-        pass
+        return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='alltime', reply_markup=f.get_keyboard(None))
+    
+    media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
+    bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id, media=media, reply_markup=markups.get_inline_keyboard(None))
 
 
 def stats_24h(user_id):
-    stats = db.users.get.stats(user_id)
-    assets = db.logs.get.assets.last24h(user_id)
+    user_stats = db.users.get_stats(user_id)
+    assets = db.logs.get_assets_last24h(user_id)
     
     if assets == None:
         msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
         new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
         return msg, new_graph
     
-    msg = f.get_stats_24h_msg(user_id, stats, assets)
-    new_graph = f.graph_handler(assets, stats["currency_id"], 'asset', '24h')
+    msg = stats.get_24h_msg(user_id, user_stats, assets)
+    new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '24h')
     if not(new_graph != None and len(assets) >= 12):
         new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
         
     return msg, new_graph
 
 def stats_7d(user_id):
-    stats = db.users.get.stats(user_id)
-    assets = db.logs.get.assets.last7d(user_id)
+    user_stats = db.users.get_stats(user_id)
+    assets = db.logs.get_assets_last7d(user_id)
     
     if assets == None:
         msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
         new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
         return msg, new_graph
     
-    msg = f.get_stats_7d_msg(user_id, stats, assets)
-    new_graph = f.graph_handler(assets, stats["currency_id"], 'asset', '7d')
+    msg = stats.get_7d_msg(user_id, user_stats, assets)
+    new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '7d')
     if not(new_graph != None and len(assets) >= 12):
         new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
         

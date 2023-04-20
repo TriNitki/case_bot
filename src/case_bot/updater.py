@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication, \
     QTextEdit, QPushButton
 
 from datetime import datetime
-import func as f
+import updates
 
 
 class MyGui(QWidget):
@@ -33,9 +33,9 @@ class MyGui(QWidget):
         now = datetime.now()
         delay = 3600000 - int(now.minute * 60000 + now.second * 1000 + now.microsecond / 1000)
         """db update"""
-        f.update_currencies()
-        f.update_items()
-        f.update_assets()
+        updates.update_currencies()
+        updates.update_items()
+        updates.update_assets()
         self.timer.setInterval(delay)
         self.textEdit.append('Success')
 
