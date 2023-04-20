@@ -54,12 +54,20 @@ def get_reply_keyboard(type, data = None):
         return markup
 
 def get_inline_keyboard(type, data = None):
-    keyboard = types.InlineKeyboardMarkup()
+    keyboard  = types.InlineKeyboardMarkup()
     
-    time_24h  = types.InlineKeyboardButton(text='За 24 часа 🌒', callback_data='timegap_24h')
-    time_7d   = types.InlineKeyboardButton(text='За неделю 🌓', callback_data='timegap_7d')
-    time_30d  = types.InlineKeyboardButton(text='За месяц 🌔', callback_data='timegap_30d')
-    all_time  = types.InlineKeyboardButton(text='За все время 🌕', callback_data='timegap_alltime')
-
-    keyboard.add(time_24h, time_7d, time_30d, all_time)
+    stats_24h = types.InlineKeyboardButton(text='За 24 часа 🌒', callback_data='stats_24h')
+    stats_7d  = types.InlineKeyboardButton(text='За неделю 🌓', callback_data='stats_7d')
+    stats_30d = types.InlineKeyboardButton(text='За месяц 🌔', callback_data='stats_30d')
+    stats_all = types.InlineKeyboardButton(text='За все время 🌕', callback_data='stats_all')
+    
+    items_24h = types.InlineKeyboardButton(text='За 24 часа 🌒', callback_data='items_24h')
+    items_7d  = types.InlineKeyboardButton(text='За неделю 🌓', callback_data='items_7d')
+    items_30d = types.InlineKeyboardButton(text='За месяц 🌔', callback_data='items_30d')
+    items_all = types.InlineKeyboardButton(text='За все время 🌕', callback_data='items_all')
+    
+    if type == 'stats':
+        keyboard.add(stats_24h, stats_7d, stats_30d, stats_all)
+    elif type == 'items':
+        keyboard.add(items_24h, items_7d, items_30d, items_all)
     return keyboard

@@ -23,6 +23,9 @@ def start(message):
 @bot.message_handler(content_types=['text'])
 def command_handler(message):
     db.users.create(message.chat.id)
+    if db.users.get_action(message.chat.id) != None:
+        db.users.delete_action(message.chat.id)
+    
     if any(item in message.text for item in ['/b ', '/buy', '/buoght', '/s ', '/sold','/sell']):
         buysell(message)
     elif any(item in message.text for item in ['/stats', 'Статистика 📊']):
@@ -54,18 +57,18 @@ def buysell(message):
 # show info about user
 def stats_handler(message):
     msg, new_graph = stats.get_24h(message.chat.id)
-    bot.send_photo(message.chat.id, caption=msg, photo=new_graph, reply_markup=markups.get_inline_keyboard(None))
+    bot.send_photo(message.chat.id, caption=msg, photo=new_graph, reply_markup=markups.get_inline_keyboard('stats'))
 
 
 def items_handler(message):
     msg = message.text.split(' ')
     item_name = ' '.join(msg[1:]).lower()
     
-    
+    db.users.add_action(message.chat.id, item_name)
     
     new_graph = items.item_stats_24h(message.chat.id, item_name)
     if new_graph != None and item_name != None:
-        bot.send_photo(message.chat.id, photo=new_graph)
+        bot.send_photo(message.chat.id, photo=new_graph, reply_markup=markups.get_inline_keyboard('items'))
     else:
         bot.send_message(message.chat.id, 'Произошла ошибка!')
 
@@ -200,30 +203,65 @@ def setcur(message):
     bot.send_message(message.chat.id, 'Произошла ошибка!')
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('timegap'))
-def callback_worker(call):
+@bot.callback_query_handler(func=lambda call: call.data.startswith('stats'))
+def stats_callback_worker(call):
+    user_id = call.message.chat.id
+    message_id = call.message.message_id
+    
     time_gap = call.data.split('_')[1]
+    
     if time_gap == "24h":
         try:
-            msg, new_graph = stats.get_24h(call.message.chat.id)
+            msg, new_graph = stats.get_24h(user_id)
         except Exception as e:
             print(e)
             return
     elif time_gap == "7d":
         try:
-            msg, new_graph = stats.get_7d(call.message.chat.id)
+            msg, new_graph = stats.get_7d(user_id)
         except Exception as e:
             print(e)
             return
     elif time_gap == "30d":
         return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='30d', reply_markup=f.get_keyboard(None))
-    elif time_gap == "alltime":
+    elif time_gap == "all":
         return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='alltime', reply_markup=f.get_keyboard(None))
     
     media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
-    bot.edit_message_media(chat_id=call.message.chat.id, message_id=call.message.message_id, media=media, reply_markup=markups.get_inline_keyboard(None))
+    bot.edit_message_media(chat_id=user_id, message_id=message_id, media=media, reply_markup=markups.get_inline_keyboard('stats'))
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('items'))
+def items_callback_worker(call):
+    user_id = call.message.chat.id
+    message_id = call.message.message_id
+    
+    time_gap = call.data.split('_')[1]
+    item_name = db.users.get_action(user_id)
+    
+    if time_gap == "24h":
+        try:
+            new_graph = items.item_stats_24h(user_id, item_name)
+        except Exception as e:
+            print(e)
+            return
+    elif time_gap == "7d":
+        try:
+            new_graph = items.item_stats_7d(user_id, item_name)
+        except Exception as e:
+            print(e)
+            return
+    elif time_gap == "30d":
+        return
+        #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='30d', reply_markup=f.get_keyboard(None))
+    elif time_gap == "all":
+        return
+        #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='alltime', reply_markup=f.get_keyboard(None))
+    
+    media = telebot.types.InputMedia(type='photo', media=new_graph)
+    bot.edit_message_media(chat_id=user_id, message_id=message_id, media=media, reply_markup=markups.get_inline_keyboard('items'))
     
 #bot.enable_save_next_step_handlers(delay=2)
 #bot.load_next_step_handlers()

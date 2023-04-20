@@ -54,7 +54,6 @@ def add_income(user_id, value):
                     """)
     conn.commit()
 
-
 def set_assets(assets):
     last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     
@@ -77,4 +76,31 @@ def set_cur_id(user_id, cur_id):
                     SET currency_id = {cur_id}
                     WHERE user_id = {user_id};
                     """)
+    conn.commit()
+
+def add_selection(user_id, selection):
+    cursor.execute (f"""UPDATE users SET selection = {selection} WHERE user_id = {user_id}""")
+    conn.commit()
+
+def add_action(user_id, action):
+    cursor.execute(f"""UPDATE users SET action = '{action}' WHERE user_id = {user_id}""")
+    conn.commit()
+
+def get_selection(user_id):
+    cursor.execute(f"""SELECT selection FROM users WHERE user_id = {user_id}""")
+    selection = cursor.fetchone()
+    return None if selection == None else selection[0]
+
+def get_action(user_id):
+    cursor.execute(f"""SELECT action FROM users WHERE user_id = {user_id}""")
+    action = cursor.fetchone()
+    return None if action == None else action[0]
+
+
+def delete_selection(user_id):
+    cursor.execute(f"UPDATE users SET selection = NULL WHERE user_id = {user_id}")
+    conn.commit()
+
+def delete_action(user_id):
+    cursor.execute(f"UPDATE users SET action = NULL WHERE user_id = {user_id}")
     conn.commit()

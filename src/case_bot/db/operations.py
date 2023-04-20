@@ -61,34 +61,6 @@ def get_operation(operation_id):
     operation = cursor.fetchone()
     return operation
 
-def get_selection(user_id):
-    cursor.execute(f"""SELECT selection FROM users WHERE user_id = {user_id}""")
-    selection = cursor.fetchone()
-    return None if selection == None else selection[0]
-
-def get_action(user_id):
-    cursor.execute(f"""SELECT action FROM users WHERE user_id = {user_id}""")
-    action = cursor.fetchone()
-    return None if action == None else action[0]
-
-
-def add_selection(user_id, selection):
-    cursor.execute (f"""UPDATE users SET selection = {selection} WHERE user_id = {user_id}""")
-    conn.commit()
-
-def add_action(user_id, action):
-    cursor.execute(f"""UPDATE users SET action = '{action}' WHERE user_id = {user_id}""")
-    conn.commit()
-
-
 def delete_operation(operation_id):
     cursor.execute(f"""DELETE FROM operations WHERE operation_id = {operation_id}""")
-    conn.commit()
-
-def delete_selection(user_id):
-    cursor.execute(f"UPDATE users SET selection = NULL WHERE user_id = {user_id}")
-    conn.commit()
-
-def delete_action(user_id):
-    cursor.execute(f"UPDATE users SET action = NULL WHERE user_id = {user_id}")
     conn.commit()
