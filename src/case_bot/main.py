@@ -9,7 +9,6 @@ import steam
 import stats
 import items
 import operations
-import updates
 
 from config import bot_token
 
@@ -18,8 +17,6 @@ bot = telebot.TeleBot(bot_token)
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    updates.update_items()
-    updates.update_assets()
     db.users.create(message.chat.id)
     bot.send_message(message.chat.id, f'Добро пожаловать в @CS_CaseBot!', reply_markup=markups.get_reply_keyboard('main'))
 

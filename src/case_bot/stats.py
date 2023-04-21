@@ -1,7 +1,5 @@
 import math
-import os
 import io
-from PIL import Image
 
 import graphs
 import db.items, db.logs, db.currencies, db.inventories, db.users
@@ -13,15 +11,18 @@ def get_24h_msg(user_id, stats, assets):
     
     
     for item in invent:
-        item_id = item[0]
-        item_name = db.items.get_name(item_id).title()
-        
-        prices = db.logs.get_item_prices_last24h(item_id)
-        price_before = prices[0][1]
-        price_after = prices[-1][1]
-        item_difference = price_after - price_before
-        item_g_rate = item_difference/price_before*100
-        item_growth_rates.append({'item_name': item_name, 'growth_rate': item_g_rate, 'difference': item_difference, 'quantity': item[1]})
+        try:
+            item_id = item[0]
+            item_name = db.items.get_name(item_id).title()
+            
+            prices = db.logs.get_item_prices_last24h(item_id)
+            price_before = prices[0][1]
+            price_after = prices[-1][1]
+            item_difference = price_after - price_before
+            item_g_rate = item_difference/price_before*100
+            item_growth_rates.append({'item_name': item_name, 'growth_rate': item_g_rate, 'difference': item_difference, 'quantity': item[1]})
+        except:
+            continue
     
     emoji_nums = ['1️⃣', '2️⃣', '3️⃣']
     
