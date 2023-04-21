@@ -3,6 +3,7 @@ from datetime import datetime
 
 from config import dbname, user, password, host
 import db.users
+
 conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
 cursor = conn.cursor()
 
@@ -15,6 +16,7 @@ def log_item_price(item_id, price, last_update):
                         {item_id}, {price}, '{last_update}'
                     );
                     """)
+    conn.commit()
 
 def log_user_asset(user_id, asset, last_update):
     stats = db.users.get_stats(user_id)
@@ -24,6 +26,7 @@ def log_user_asset(user_id, asset, last_update):
                         {user_id}, {asset + stats['income'] - stats['expense']}, '{last_update}'
                     );
                     """)
+    conn.commit()
 
 
 def get_assets_last24h(user_id):

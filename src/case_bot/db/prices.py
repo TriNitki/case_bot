@@ -4,10 +4,9 @@ from datetime import datetime
 from config import dbname, user, password, host
 import db.items, db.logs
 import steam
+
 conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host)
 cursor = conn.cursor()
-
-
 
 
 def set_price(item_names):

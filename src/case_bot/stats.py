@@ -144,7 +144,7 @@ def get_7d_msg(user_id, stats, assets):
 def get_24h(user_id):
     user_stats = db.users.get_stats(user_id)
     assets = db.logs.get_assets_last24h(user_id)
-    
+
     if assets == None:
         msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
         with open(r'plots\blank_graph.png', "rb") as fh:

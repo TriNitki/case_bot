@@ -56,11 +56,8 @@ def add_income(user_id, value):
 
 def set_assets(assets):
     last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    
     for asset in assets:
         db.logs.log_user_asset(asset[0], asset[1], last_update)
-    
-    conn.commit()
 
 def set_steamid(user_id, steam_id):
     cursor.execute(f"""

@@ -9,6 +9,7 @@ import steam
 import stats
 import items
 import operations
+import updates
 
 from config import bot_token
 
@@ -17,8 +18,10 @@ bot = telebot.TeleBot(bot_token)
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    updates.update_items()
+    updates.update_assets()
     db.users.create(message.chat.id)
-    bot.send_message(message.chat.id, f'Добро пожаловать в @CS_CaseBot!', reply_markup=f.get_menu('main'))
+    bot.send_message(message.chat.id, f'Добро пожаловать в @CS_CaseBot!', reply_markup=markups.get_reply_keyboard('main'))
 
 @bot.message_handler(content_types=['text'])
 def command_handler(message):
@@ -255,4 +258,4 @@ def items_callback_worker(call):
 
 #bot.enable_save_next_step_handlers(delay=2)
 #bot.load_next_step_handlers()
-bot.polling(none_stop=True)
+bot.infinity_polling(timeout=10, long_polling_timeout=5)
