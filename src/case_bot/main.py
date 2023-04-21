@@ -211,17 +211,9 @@ def stats_callback_worker(call):
     time_gap = call.data.split('_')[1]
     
     if time_gap == "24h":
-        try:
-            msg, new_graph = stats.get_24h(user_id)
-        except Exception as e:
-            print(e)
-            return
+        msg, new_graph = stats.get_24h(user_id)
     elif time_gap == "7d":
-        try:
-            msg, new_graph = stats.get_7d(user_id)
-        except Exception as e:
-            print(e)
-            return
+        msg, new_graph = stats.get_7d(user_id)
     elif time_gap == "30d":
         return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='30d', reply_markup=f.get_keyboard(None))
@@ -229,8 +221,11 @@ def stats_callback_worker(call):
         return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='alltime', reply_markup=f.get_keyboard(None))
     
-    media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
-    bot.edit_message_media(chat_id=user_id, message_id=message_id, media=media, reply_markup=markups.get_inline_keyboard('stats'))
+    try:
+        media = telebot.types.InputMedia(type='photo', media=new_graph, caption=msg)
+        bot.edit_message_media(chat_id=user_id, message_id=message_id, media=media, reply_markup=markups.get_inline_keyboard('stats'))
+    except Exception as e:
+        print(e)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('items'))
@@ -242,17 +237,9 @@ def items_callback_worker(call):
     item_name = db.users.get_action(user_id)
     
     if time_gap == "24h":
-        try:
-            new_graph = items.item_stats_24h(user_id, item_name)
-        except Exception as e:
-            print(e)
-            return
+        new_graph = items.item_stats_24h(user_id, item_name)
     elif time_gap == "7d":
-        try:
-            new_graph = items.item_stats_7d(user_id, item_name)
-        except Exception as e:
-            print(e)
-            return
+        new_graph = items.item_stats_7d(user_id, item_name)
     elif time_gap == "30d":
         return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='30d', reply_markup=f.get_keyboard(None))
@@ -260,9 +247,12 @@ def items_callback_worker(call):
         return
         #bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='alltime', reply_markup=f.get_keyboard(None))
     
-    media = telebot.types.InputMedia(type='photo', media=new_graph)
-    bot.edit_message_media(chat_id=user_id, message_id=message_id, media=media, reply_markup=markups.get_inline_keyboard('items'))
-    
+    try:
+        media = telebot.types.InputMedia(type='photo', media=new_graph)
+        bot.edit_message_media(chat_id=user_id, message_id=message_id, media=media, reply_markup=markups.get_inline_keyboard('items'))
+    except Exception as e:
+        print(e)
+
 #bot.enable_save_next_step_handlers(delay=2)
 #bot.load_next_step_handlers()
 bot.polling(none_stop=True)

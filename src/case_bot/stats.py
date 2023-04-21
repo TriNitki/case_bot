@@ -1,5 +1,6 @@
 import math
 import os
+import io
 from PIL import Image
 
 import graphs
@@ -146,13 +147,15 @@ def get_24h(user_id):
     
     if assets == None:
         msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
-        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        with open(r'plots\blank_graph.png', "rb") as fh:
+            new_graph = io.BytesIO(fh.read())
         return msg, new_graph
     
     msg = get_24h_msg(user_id, user_stats, assets)
     new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '24h')
     if not(new_graph != None and len(assets) >= 12):
-        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        with open(r'plots\blank_graph.png', "rb") as fh:
+            new_graph = io.BytesIO(fh.read())
         
     return msg, new_graph
 
@@ -162,15 +165,19 @@ def get_7d(user_id):
     
     if assets == None:
         msg = 'Я о вас совсем ничего не знаю 😓\nПроизведите какие-нибудь операции, либо подождите обновление базы данных\n\nP.S. Обновление базы данных происходит раз в час'
-        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        with open(r'plots\blank_graph.png', "rb") as fh:
+            new_graph = io.BytesIO(fh.read())
         return msg, new_graph
     
     msg = get_7d_msg(user_id, user_stats, assets)
     new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '7d')
     if not(new_graph != None and len(assets) >= 12):
-        new_graph = Image.open(os.path.join(r'plots\blank_graph.png'))
+        with open(r'plots\blank_graph.png', "rb") as fh:
+            new_graph = io.BytesIO(fh.read())
         
     return msg, new_graph
+
+
 
 '''def stats_alltime(message):
     stats = db.users.get.stats(message.chat.id)
