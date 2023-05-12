@@ -1,7 +1,7 @@
 import math
 from telebot import types
 
-def get_reply_keyboard(type, data = None):
+def get_reply_keyboard(type, data=None):
     markup    = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
     back      = types.KeyboardButton('/back')

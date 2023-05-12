@@ -2,7 +2,7 @@ import telebot
 from datetime import datetime
 
 import models
-import db.users, db.operations, db.items, db.prices, db.logs, db.currencies
+import db.users, db.operations, db.items, db.prices, db.logs, db.currencies, db.inventories
 import histories
 import markups
 import steam
@@ -87,12 +87,12 @@ def history(message):
                 bot.send_message(message.chat.id, 'Готово!')
             else:
                 bot.send_message(message.chat.id, 'Произошла ошибка')
-            db.operations.delete_selection(message.chat.id)
+            db.users.delete_selection(message.chat.id)
             message.text = '/history'
             history(message)
         elif '/back' in message.text:
-            if db.operations.get_selection(message.chat.id):
-                db.operations.delete_selection(message.chat.id)
+            if db.users.get_selection(message.chat.id):
+                db.users.delete_selection(message.chat.id)
                 message.text = '/history'
                 history(message)
             else:
@@ -102,12 +102,12 @@ def history(message):
             histories.operation_edit(message)
             bot.register_next_step_handler(message, hist_handler)
         else:
-            action = db.operations.get_action(message.chat.id)
-            selection = db.operations.get_selection(message.chat.id)
+            action = db.users.get_action(message.chat.id)
+            selection = db.users.get_selection(message.chat.id)
             if action != None and selection != None:
                 result = operations.edit_handler(selection, action, message.text)
-                db.operations.delete_action(message.chat.id)
-                db.operations.delete_selection(message.chat.id)
+                db.users.delete_action(message.chat.id)
+                db.users.delete_selection(message.chat.id)
                 if result == 'success':
                     bot.send_message(message.chat.id, 'Готово!', reply_markup=markups.get_reply_keyboard('main'))
                 else:
@@ -134,7 +134,7 @@ def history(message):
 def inventory(message):
     inventory = [] # Stores all items here
 
-    db_inv = db.inventories.get.inventory(message.chat.id)
+    db_inv = db.inventories.get_inventory(message.chat.id)
     for items in db_inv:
         inv = models.inventory()
         inv.new(items)

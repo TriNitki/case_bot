@@ -48,7 +48,7 @@ def get_24h_msg(user_id, stats, assets):
     growth_rate = difference/asset_before*100
     p_or_m = '-' if difference < 0 else '+'
 
-    if len(assets) < 12:
+    if len(assets) < 6:
         msg = f"""⁉️ Я еще не успел собрать вашу полную статистику ⁉️
 
 ℹ️ Вот что я пока знаю:
@@ -115,7 +115,7 @@ def get_7d_msg(user_id, stats, assets):
     growth_rate = difference/asset_before*100
     p_or_m = '-' if difference < 0 else '+'
 
-    if len(assets) < 12:
+    if len(assets) < 6:
         msg = f"""⁉️ Я еще не успел собрать вашу полную статистику ⁉️
 
 ℹ️ Вот что я пока знаю:
@@ -154,7 +154,7 @@ def get_24h(user_id):
     
     msg = get_24h_msg(user_id, user_stats, assets)
     new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '24h')
-    if not(new_graph != None and len(assets) >= 12):
+    if not(new_graph != None and len(assets) >= 6):
         with open(r'plots\blank_graph.png', "rb") as fh:
             new_graph = io.BytesIO(fh.read())
         
@@ -172,7 +172,7 @@ def get_7d(user_id):
     
     msg = get_7d_msg(user_id, user_stats, assets)
     new_graph = graphs.handler(assets, user_stats["currency_id"], 'asset', '7d')
-    if not(new_graph != None and len(assets) >= 12):
+    if not(new_graph != None and len(assets) >= 6):
         with open(r'plots\blank_graph.png', "rb") as fh:
             new_graph = io.BytesIO(fh.read())
         
