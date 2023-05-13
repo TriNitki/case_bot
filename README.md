@@ -1,8 +1,11 @@
 # tg_case_bot
- Telegram Case Bot — это телеграм чат-бат для анализа рынка [*Steam Community Market*](https://steamcommunity.com/market/). Бот позволяет отслеживать состояние инвестиций и добавлять, удалять и редактировать уже имеющиеся активности.
+---
+ __Telegram Case Bot__ — это телеграм чат-бат для анализа рынка [*Steam Community Market*](https://steamcommunity.com/market/). Бот позволяет отслеживать состояние инвестиций и добавлять, удалять и редактировать уже имеющиеся активности.
 
-## Используемые технологии
+---
+![12](https://img.shields.io/github/pipenv/locked/python-version/TriNitki/tg_case_bot?logo=python) ![12](https://img.shields.io/github/pipenv/locked/dependency-version/TriNitki/tg_case_bot/pytelegrambotapi?label=Telebot&logo=telegram) ![12](https://img.shields.io/badge/PostgreSQL-15.2-blue/?logo=postgresql)
 
+---
 
 ## Установка
 
@@ -10,8 +13,7 @@
 ```
 $ git clone https://github.com/TriNitki/tg_case_bot
 ```
-+ Создание и активация виртуального окружения.
-+ Установка необходимых пакетов(библиотек): 
++ Установка необходимых пакетов: 
 ```
 pip install -r requirements.txt
 ```
@@ -24,4 +26,8 @@ db_name="..."
 db_user="..."
 db_password="..."
 db_host="..."
+```
++ Запуск чат-бота:
+```
+python .\src\case_bot\main.py
 ```
